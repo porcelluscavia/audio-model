@@ -106,6 +106,7 @@ class ResNetBasicHead(nn.Module):
             return (x_v, x_n)
         else:
             x = self.projection(x)
+            linear_output = x
 
             # Performs fully convlutional inference.
             if not self.training:
@@ -113,4 +114,4 @@ class ResNetBasicHead(nn.Module):
                 x = x.mean([1, 2])
 
             x = x.view(x.shape[0], -1)
-            return x
+            return x, linear_output

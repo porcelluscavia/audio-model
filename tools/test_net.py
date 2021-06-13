@@ -107,7 +107,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
                     [preds, labels, audio_idx]
                 )
             if cfg.NUM_GPUS:
-                preds = preds.cpu()
+                preds = preds[0].cpu()
                 labels = labels.cpu()
                 audio_idx = audio_idx.cpu()
 

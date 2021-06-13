@@ -72,6 +72,15 @@ _C.TRAIN.CHECKPOINT_EPOCH_RESET = False
 _C.TRAIN.CHECKPOINT_CLEAR_NAME_PATTERN = ()  # ("backbone.",)
 
 # ---------------------------------------------------------------------------- #
+# Embedding options
+# ---------------------------------------------------------------------------- #
+_C.EMBEDDING = CfgNode()
+
+# Path to embeddings file to be loaded in.
+_C.EMBEDDING.FILE_PATH = ""
+
+
+# ---------------------------------------------------------------------------- #
 # Testing options
 # ---------------------------------------------------------------------------- #
 _C.TEST = CfgNode()
@@ -147,6 +156,8 @@ _C.MODEL.NUM_CLASSES = [400, ]
 
 # Loss function.
 _C.MODEL.LOSS_FUNC = "cross_entropy"
+
+_C.MODEL.EMB_LOSS_FUNC = "mean_squared_error"
 
 # Model architectures that has one single pathway.
 _C.MODEL.SINGLE_PATHWAY_ARCH = ["slow", "fast"]
@@ -335,6 +346,8 @@ _C.EPICKITCHENS.AUDIO_DATA_FILE = ""
 
 _C.EPICKITCHENS.ANNOTATIONS_DIR = ""
 
+_C.EPICKITCHENS.EMBEDDINGS_DIR = ""
+
 _C.EPICKITCHENS.TRAIN_LIST = "EPIC_100_train.pkl"
 
 _C.EPICKITCHENS.VAL_LIST = "EPIC_100_validation.pkl"
@@ -354,6 +367,12 @@ _C.VGGSOUND = CfgNode()
 _C.VGGSOUND.AUDIO_DATA_DIR = ""
 
 _C.VGGSOUND.ANNOTATIONS_DIR = ""
+
+_C.VGGSOUND.EMBEDDINGS_FILE_TRAIN = ""
+
+_C.VGGSOUND.EMBEDDINGS_SIZE = 0
+
+_C.VGGSOUND.EMBEDDINGS_FILE_TEST = ""
 
 _C.VGGSOUND.TRAIN_LIST = "train.pkl"
 

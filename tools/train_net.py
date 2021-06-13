@@ -8,6 +8,7 @@ from scipy.stats import gmean
 import pprint
 import wandb
 import torch
+import torch.nn as nn
 from fvcore.nn.precise_bn import get_bn_modules, update_bn_stats
 
 import slowfast.models.losses as losses
@@ -26,7 +27,7 @@ logger = logging.get_logger(__name__)
 
 
 def train_epoch(
-    train_loader, model, optimizer, train_meter, cur_epoch, cfg, writer=None, wandb_log=False
+    train_loader, model, optimizer, train_meter, cur_epoch, cfg, embeddings=None, writer=None, wandb_log=False
 ):
     """
     Perform the audio training for one epoch.
@@ -53,6 +54,7 @@ def train_epoch(
     for cur_iter, (inputs, labels, _, meta) in enumerate(train_loader):
         # Transfer the data to the current GPU device.
         if cfg.NUM_GPUS:
+            embeddings = embeddings.to('cuda', non_blocking=True)
             if isinstance(inputs, (list,)):
                 for i in range(len(inputs)):
                     inputs[i] = inputs[i].cuda(non_blocking=True)
@@ -75,9 +77,12 @@ def train_epoch(
 
         train_meter.data_toc()
 
-        preds = model(inputs)
+        #preds = model(inputs) #this is inside for loop. one input (slow + fast) per iteration
+        preds, emb_preds = model(inputs)
+
 
         if isinstance(labels, (dict,)):
+            # This is for EPIC-Kitchens, in which labels are split by noun and verb, I believe.
             # Explicitly declare reduction to mean.
             loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
@@ -92,8 +97,26 @@ def train_epoch(
             # Explicitly declare reduction to mean.
             loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
-            # Compute the loss.
+            emb_loss_fun = losses.get_loss_func(cfg.MODEL.EMB_LOSS_FUNC)(reduction="mean")
+
+            # Get array of (pretrained, from file) embeddings for all the labels in the batch.
+            embeddings_for_batch = embeddings(labels)
+
+            # Set the batch embeddings to be on the current device.
+            embeddings_for_batch = embeddings_for_batch.to('cuda', non_blocking=True)
+
+            # Compute the loss on the labels (label represented as single number).
+            # print("labels: ", labels) #batch size is 32. there are 32 labels.
             loss = loss_fun(preds, labels)
+
+            # print("embeddings_for_batch: ", embeddings_for_batch)
+            new_shape = embeddings_for_batch.shape
+            emb_preds = emb_preds.view(new_shape)
+            # Compute the loss for the embeddings.
+            emb_loss = emb_loss_fun(emb_preds, embeddings_for_batch)
+
+            # Add the losses, so as to fine tune using the embeddings.
+            loss = loss + emb_loss
 
             # check Nan Loss.
             misc.check_nan_losses(loss)
@@ -101,6 +124,10 @@ def train_epoch(
         # Perform the backward pass.
         optimizer.zero_grad()
         loss.backward()
+
+        # Prevent exploding gradients.
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+
         # Update the parameters.
         optimizer.step()
 
@@ -269,7 +296,7 @@ def train_epoch(
 
 
 @torch.no_grad()
-def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None, wandb_log=False):
+def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, embeddings=None, writer=None, wandb_log=False):
     """
     Evaluate the model on the val set.
     Args:
@@ -288,7 +315,8 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None, wandb_
 
     for cur_iter, (inputs, labels, _, meta) in enumerate(val_loader):
         if cfg.NUM_GPUS:
-            # Transferthe data to the current GPU device.
+            embeddings = embeddings.to('cuda', non_blocking=True)
+            # Transfer the data to the current GPU device.
             if isinstance(inputs, (list,)):
                 for i in range(len(inputs)):
                     inputs[i] = inputs[i].cuda(non_blocking=True)
@@ -306,7 +334,8 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None, wandb_
                     meta[key] = val.cuda(non_blocking=True)
         val_meter.data_toc()
 
-        preds = model(inputs)
+        preds, emb_preds = model(inputs)
+
 
         if isinstance(labels, (dict,)):
             # Explicitly declare reduction to mean.
@@ -412,11 +441,31 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None, wandb_
             val_meter.update_predictions((preds[0], preds[1]), (labels['verb'], labels['noun']))
 
         else:
-            # Explicitly declare reduction to mean.
             loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
-            # Compute the loss.
+            emb_loss_fun = losses.get_loss_func(cfg.MODEL.EMB_LOSS_FUNC)(reduction="mean")
+
+            # Get array of (pretrained, from file) embeddings for all the labels in the batch.
+            embeddings_for_batch = embeddings(labels)
+
+            # Set the batch embeddings to be on the current device.
+            embeddings_for_batch = embeddings_for_batch.to('cuda', non_blocking=True)
+
+            # Compute the loss on the labels (label represented as single number).
+            # print("labels: ", labels) #batch size is 32. there are 32 labels.
             loss = loss_fun(preds, labels)
+
+            # print("embeddings_for_batch: ", embeddings_for_batch)
+            new_shape = embeddings_for_batch.shape
+            emb_preds = emb_preds.view(new_shape)
+
+            # Compute the loss for the embeddings.
+            emb_loss = emb_loss_fun(emb_preds, embeddings_for_batch)
+
+            # Add the losses, so as to fine tune using the embeddings.
+            loss = loss + emb_loss
+
+
 
             if cfg.DATA.MULTI_LABEL:
                 if cfg.NUM_GPUS > 1:
@@ -593,6 +642,10 @@ def train(cfg):
     if cfg.TRAIN.DATASET != 'epickitchens' or not cfg.EPICKITCHENS.TRAIN_PLUS_VAL:
         train_loader = loader.construct_loader(cfg, "train")
         val_loader = loader.construct_loader(cfg, "val")
+        #since both train and val are derived from the inputted "train" file, the following embeddings contain the info for both
+        train_embedding_weights = loader.load_embeddings(cfg, train=True)
+        train_embedding_weights = torch.from_numpy(train_embedding_weights)
+        train_embeddings = nn.Embedding.from_pretrained(train_embedding_weights)
         precise_bn_loader = (
             loader.construct_loader(cfg, "train")
             if cfg.BN.USE_PRECISE_STATS
@@ -645,7 +698,7 @@ def train(cfg):
 
         # Train for one epoch.
         train_epoch(
-            train_loader, model, optimizer, train_meter, cur_epoch, cfg, writer, wandb_log
+            train_loader, model, optimizer, train_meter, cur_epoch, cfg, train_embeddings, writer, wandb_log
         )
 
         is_checkp_epoch = cu.is_checkpoint_epoch(
@@ -675,7 +728,7 @@ def train(cfg):
             cu.save_checkpoint(cfg.OUTPUT_DIR, model, optimizer, cur_epoch, cfg)
         # Evaluate the model on validation set.
         if is_eval_epoch:
-            is_best_epoch, _ = eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer, wandb_log)
+            is_best_epoch, _ = eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, train_embeddings, writer, wandb_log)
             if is_best_epoch:
                 cu.save_checkpoint(cfg.OUTPUT_DIR, model, optimizer, cur_epoch, cfg, is_best_epoch=is_best_epoch)
 

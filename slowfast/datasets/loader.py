@@ -75,3 +75,15 @@ def shuffle_dataset(loader, cur_epoch):
     if isinstance(sampler, DistributedSampler):
         # DistributedSampler shuffles data based on epoch
         sampler.set_epoch(cur_epoch)
+
+def load_embeddings(cfg, train=True):
+
+    if train:
+        with open(cfg.VGGSOUND.EMBEDDINGS_FILE_TRAIN, 'rb') as f:
+            embedding = np.load(f)
+            # import pdb
+            # pdb.set_trace()
+    else:
+        with open(cfg.VGGSOUND.EMBEDDINGS_FILE_TEST, 'rb') as f:
+            embedding = np.load(f)
+    return embedding

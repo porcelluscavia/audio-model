@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 Sup!
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 """Loss functions."""
@@ -9,6 +9,7 @@ _LOSSES = {
     "cross_entropy": nn.CrossEntropyLoss,
     "bce": nn.BCELoss,
     "bce_logit": nn.BCEWithLogitsLoss,
+    "mean_squared_error": nn.MSELoss,
 }
 
 

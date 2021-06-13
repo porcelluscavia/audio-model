@@ -5,6 +5,7 @@
 
 import torch
 import torch.nn as nn
+import numpy as np
 
 import slowfast.utils.weight_init_helper as init_helper
 from slowfast.models.batchnorm_helper import get_norm
@@ -288,6 +289,10 @@ class SlowFast(nn.Module):
             norm_module=self.norm_module,
         )
 
+        self.linear = torch.nn.Linear(309, 300)
+
+        self.softmax = nn.Softmax(dim=1)
+
         self.head = head_helper.ResNetBasicHead(
             dim_in=[
                 width_per_group * 32,
@@ -311,6 +316,11 @@ class SlowFast(nn.Module):
         )
 
     def forward(self, x, bboxes=None):
+        # print(type(x)) #list
+        # print(x[1])
+        # print(np.shape(x[0])) #torch.Size([1, 1, 128, 128]) #slow
+        # print(np.shape(x[1]))  # torch.Size([1, 1, 512, 128]) #why is it 1,1? are we only passing one spectrogram at a time?
+        #len of x is 2
         x = self.s1(x)
         x = self.s1_fuse(x)
         x = self.s2(x)
@@ -323,8 +333,26 @@ class SlowFast(nn.Module):
         x = self.s4(x)
         x = self.s4_fuse(x)
         x = self.s5(x)
-        x = self.head(x)
-        return x
+        # slow_pooled = x[0]
+
+        # Get the output of the slow pathway after the fifth layer.
+        # slow_out = x[0]
+        # slow_out = slow_out.view(slow_out.size(0), -1)
+        #print(np.shape(slow_pathway.view(-1))) #torch.Size([262144])
+        # fc = torch.nn.Linear(784, 10)
+        # make x[0] make something with the dimensions of the embedding, and output it
+        #what is the dimension of the embedding? 100
+        # contains x[0] and x[1], with shapes torch.Size([1, 2048, 32, 4])-slow and torch.Size([1, 256, 128, 4])-fast
+        #add average pooling for 32 x 4 to single?
+        # ll_output = self.linear(slow_out) #for the slow input with batch size: torch.Size([32, 1, 128, 128])
+        # print("ll_output: ", ll_output)
+
+        # ll_output = lin_layer(x[0])
+        # import pdb
+        # pdb.set_trace()
+        x, linear_output = self.head(x)
+        ll_output = self.linear(linear_output)
+        return x, ll_output
 
     def freeze_fn(self, freeze_mode):
         if freeze_mode == 'bn_parameters':
