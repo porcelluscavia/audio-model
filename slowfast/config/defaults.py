@@ -263,7 +263,7 @@ _C.SOLVER.STEPS = []
 _C.SOLVER.LRS = []
 
 # Maximal number of epochs.
-_C.SOLVER.MAX_EPOCH = 300
+_C.SOLVER.MAX_EPOCH = 100
 
 # Momentum.
 _C.SOLVER.MOMENTUM = 0.9
@@ -372,6 +372,9 @@ _C.VGGSOUND.EMBEDDINGS_FILE_TRAIN = ""
 
 _C.VGGSOUND.EMBEDDINGS_SIZE = 0
 
+# Proportion of the embedding weight to use,
+_C.VGGSOUND.LAMBDA = 0.0
+
 _C.VGGSOUND.EMBEDDINGS_FILE_TEST = ""
 
 _C.VGGSOUND.TRAIN_LIST = "train.pkl"
@@ -388,7 +391,7 @@ _C.TENSORBOARD = CfgNode()
 
 # Log to summary writer, this will automatically.
 # log loss, lr and metrics during train/eval.
-_C.TENSORBOARD.ENABLE = False
+_C.TENSORBOARD.ENABLE = True
 # Provide path to prediction results for visualization.
 # This is a pickle file of [prediction_tensor, label_tensor]
 _C.TENSORBOARD.PREDICTIONS_PATH = ""

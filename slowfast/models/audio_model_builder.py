@@ -289,7 +289,7 @@ class SlowFast(nn.Module):
             norm_module=self.norm_module,
         )
 
-        self.linear = torch.nn.Linear(309, 300)
+        self.linear = torch.nn.Linear(309, cfg.VGGSOUND.EMBEDDINGS_SIZE)
 
         self.softmax = nn.Softmax(dim=1)
 

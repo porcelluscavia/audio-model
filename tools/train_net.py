@@ -115,8 +115,9 @@ def train_epoch(
             # Compute the loss for the embeddings.
             emb_loss = emb_loss_fun(emb_preds, embeddings_for_batch)
 
+
             # Add the losses, so as to fine tune using the embeddings.
-            loss = loss + emb_loss
+            loss = ((1 - cfg.VGGSOUND.LAMBDA) * loss) + (cfg.VGGSOUND.LAMBDA * emb_loss)
 
             # check Nan Loss.
             misc.check_nan_losses(loss)
@@ -638,6 +639,8 @@ def train(cfg):
     # Load a checkpoint to resume training if applicable.
     start_epoch = cu.load_train_checkpoint(cfg, model, optimizer)
 
+
+
     # Create the audio train and val loaders.
     if cfg.TRAIN.DATASET != 'epickitchens' or not cfg.EPICKITCHENS.TRAIN_PLUS_VAL:
         train_loader = loader.construct_loader(cfg, "train")
@@ -692,7 +695,9 @@ def train(cfg):
     # Perform the training loop.
     logger.info("Start epoch: {}".format(start_epoch + 1))
 
+
     for cur_epoch in range(start_epoch, cfg.SOLVER.MAX_EPOCH):
+
         # Shuffle the dataset.
         loader.shuffle_dataset(train_loader, cur_epoch)
 
@@ -700,6 +705,7 @@ def train(cfg):
         train_epoch(
             train_loader, model, optimizer, train_meter, cur_epoch, cfg, train_embeddings, writer, wandb_log
         )
+
 
         is_checkp_epoch = cu.is_checkpoint_epoch(
             cfg,
