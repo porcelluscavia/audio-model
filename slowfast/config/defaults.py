@@ -431,6 +431,49 @@ _C.TENSORBOARD.HISTOGRAM.TOPK = 10
 # Figure size of the histograms plotted.
 _C.TENSORBOARD.HISTOGRAM.FIGSIZE = [8, 8]
 
+# Config for layers' weights and activations visualization.
+# _C.TENSORBOARD.ENABLE must be True.
+_C.TENSORBOARD.MODEL_VIS = CfgNode()
+
+# If False, skip model visualization.
+_C.TENSORBOARD.MODEL_VIS.ENABLE = False
+
+# If False, skip visualizing model weights.
+_C.TENSORBOARD.MODEL_VIS.MODEL_WEIGHTS = False
+
+# If False, skip visualizing model activations.
+_C.TENSORBOARD.MODEL_VIS.ACTIVATIONS = False
+
+# If False, skip visualizing input videos.
+_C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = False
+
+
+# List of strings containing data about layer names and their indexing to
+# visualize weights and activations for. The indexing is meant for
+# choosing a subset of activations outputed by a layer for visualization.
+# If indexing is not specified, visualize all activations outputed by the layer.
+# For each string, layer name and indexing is separated by whitespaces.
+# e.g.: [layer1 1,2;1,2, layer2, layer3 150,151;3,4]; this means for each array `arr`
+# along the batch dimension in `layer1`, we take arr[[1, 2], [1, 2]]
+_C.TENSORBOARD.MODEL_VIS.LAYER_LIST = []
+# Top-k predictions to plot on videos
+_C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 1
+# Colormap to for text boxes and bounding boxes colors
+_C.TENSORBOARD.MODEL_VIS.COLORMAP = "Pastel2"
+# Config for visualization video inputs with Grad-CAM.
+# _C.TENSORBOARD.ENABLE must be True.
+_C.TENSORBOARD.MODEL_VIS.GRAD_CAM = CfgNode()
+# Whether to run visualization using Grad-CAM technique.
+_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE = True
+# CNN layers to use for Grad-CAM. The number of layers must be equal to
+# number of pathway(s).
+_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = []
+# If True, visualize Grad-CAM using true labels for each instances.
+# If False, use the highest predicted class.
+_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL = False
+# Colormap to for text boxes and bounding boxes colors
+_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.COLORMAP = "viridis"
+
 
 # -----------------------------------------------------------------------------
 # WANDB Visualization Options

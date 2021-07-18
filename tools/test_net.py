@@ -18,6 +18,9 @@ from slowfast.datasets import loader
 from slowfast.models import build_model
 from slowfast.utils.meters import TestMeter, EPICTestMeter
 from slowfast.utils.vggsound_metrics import get_stats
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+
 
 logger = logging.get_logger(__name__)
 
@@ -63,7 +66,17 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
         test_meter.data_toc()
 
         # Perform the forward pass.
+        #Inputs has size 1 x 32 x [64, 32, 32]
         preds = model(inputs)
+        # input = [torch.flatten(input) for input in inputs]
+
+        #IS this a good layer?
+        # target_layer = model.s5
+        # cam = GradCAM(model=model, target_layer=target_layer, use_cuda=False)
+        # grayscale_cam = cam(input_tensor=torch.flat, target_category=labels)
+
+        # import pdb
+        # pdb.set_trace()
 
         if isinstance(labels, (dict,)):
             # Gather all the predictions across all the devices to perform ensemble.
@@ -212,6 +225,8 @@ def test(cfg):
 
     # # Perform multi-view test on the entire dataset.
     test_meter, preds, preds_clips, labels, metadata = perform_test(test_loader, model, test_meter, cfg, writer)
+
+
 
     if du.is_master_proc():
         if cfg.TEST.DATASET == 'epickitchens':
