@@ -1,5 +1,5 @@
 TRAIN:
-  ENABLE: True
+  ENABLE: False
   DATASET: vggsound
   BATCH_SIZE: 32 #8 - the largest power of 8 that allows for two models side by side on one device
   EVAL_PERIOD: 2
@@ -7,6 +7,7 @@ TRAIN:
   AUTO_RESUME: True
 DATA:
   INPUT_CHANNEL_NUM: [1, 1]
+  NUM_FRAMES: 1
 AUDIO_DATA:
   SAMPLING_RATE: 16000
   CLIP_SECS: 5.119

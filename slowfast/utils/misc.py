@@ -75,34 +75,150 @@ def cpu_mem_usage():
     return usage, total
 
 
-def _get_model_analysis_input(cfg):
+# def _get_model_analysis_input(cfg):
+#     """
+#     Return a dummy input for model analysis with batch size 1. The input is
+#         used for analyzing the model (counting flops and activations etc.).
+#     Args:
+#         cfg (CfgNode): configs. Details can be found in
+#             slowfast/config/defaults.py
+#
+#     Returns:
+#         inputs: the input for model analysis.
+#     """
+#     spectrogram_dimension = 1
+#     input_tensors = torch.rand(
+#         spectrogram_dimension,
+#         cfg.AUDIO_DATA.NUM_FRAMES,
+#         cfg.AUDIO_DATA.NUM_FREQUENCIES,
+#     )
+#     model_inputs = pack_pathway_output(cfg, input_tensors)
+#     for i in range(len(model_inputs)):
+#         model_inputs[i] = model_inputs[i].unsqueeze(0)
+#         if cfg.NUM_GPUS:
+#             model_inputs[i] = model_inputs[i].cuda(non_blocking=True)
+#
+#     inputs = (model_inputs,)
+#     return inputs
+
+
+# def get_model_stats(model, cfg, mode):
+#     """
+#     Compute statistics for the current model given the config.
+#     Args:
+#         model (model): model to perform analysis.
+#         cfg (CfgNode): configs. Details can be found in
+#             slowfast/config/defaults.py
+#         mode (str): Options include `flop` or `activation`. Compute either flop
+#             (gflops) or activation count (mega).
+#
+#     Returns:
+#         float: the total number of count of the given model.
+#     """
+#     assert mode in [
+#         "flop",
+#         "activation",
+#     ], "'{}' not supported for model analysis".format(mode)
+#     if mode == "flop":
+#         model_stats_fun = flop_count
+#     elif mode == "activation":
+#         model_stats_fun = activation_count
+#
+#     # Set model to evaluation mode for analysis.
+#     # Evaluation mode can avoid getting stuck with sync batchnorm.
+#     model_mode = model.training
+#     model.eval()
+#     inputs = _get_model_analysis_input(cfg)
+#     count_dict, *_ = model_stats_fun(model, inputs)
+#     count = sum(count_dict.values())
+#     model.train(model_mode)
+#     return count
+
+
+# def log_model_info(model, cfg):
+#     """
+#     Log info, includes number of parameters, gpu usage, gflops and activation count.
+#         The model info is computed when the model is in validation mode.
+#     Args:
+#         model (model): model to log the info.
+#         cfg (CfgNode): configs. Details can be found in
+#             slowfast/config/defaults.py
+#     """
+#     logger.info("Model:\n{}".format(model))
+#     logger.info("Params: {:,}".format(params_count(model)))
+#     logger.info("Mem: {:,} MB".format(gpu_mem_usage()))
+#     logger.info(
+#         "Flops: {:,} G".format(
+#             get_model_stats(model, cfg, "flop")
+#         )
+#     )
+#     logger.info(
+#         "Activations: {:,} M".format(
+#             get_model_stats(model, cfg, "activation")
+#         )
+#     )
+#     logger.info("nvidia-smi")
+#     os.system("nvidia-smi")
+
+def _get_model_analysis_input(cfg, use_train_input):
     """
     Return a dummy input for model analysis with batch size 1. The input is
         used for analyzing the model (counting flops and activations etc.).
     Args:
         cfg (CfgNode): configs. Details can be found in
             slowfast/config/defaults.py
-
+        use_train_input (bool): if True, return the input for training. Otherwise,
+            return the input for testing.
     Returns:
         inputs: the input for model analysis.
     """
-    spectrogram_dimension = 1
-    input_tensors = torch.rand(
-        spectrogram_dimension,
-        cfg.AUDIO_DATA.NUM_FRAMES,
-        cfg.AUDIO_DATA.NUM_FREQUENCIES,
-    )
+    rgb_dimension = 3
+    if use_train_input:
+        if cfg.TRAIN.DATASET in ["imagenet", "imagenetprefetch"]:
+            input_tensors = torch.rand(
+                rgb_dimension,
+                cfg.DATA.TRAIN_CROP_SIZE,
+                cfg.DATA.TRAIN_CROP_SIZE,
+            )
+        else:
+            input_tensors = torch.rand(
+                rgb_dimension,
+                cfg.DATA.NUM_FRAMES,
+                cfg.DATA.TRAIN_CROP_SIZE,
+                cfg.DATA.TRAIN_CROP_SIZE,
+            )
+    else:
+        if cfg.TEST.DATASET in ["imagenet", "imagenetprefetch"]:
+            input_tensors = torch.rand(
+                rgb_dimension,
+                cfg.DATA.TEST_CROP_SIZE,
+                cfg.DATA.TEST_CROP_SIZE,
+            )
+        else:
+            input_tensors = torch.rand(
+                rgb_dimension,
+                cfg.DATA.NUM_FRAMES,
+                cfg.DATA.TEST_CROP_SIZE,
+                cfg.DATA.TEST_CROP_SIZE,
+            )
     model_inputs = pack_pathway_output(cfg, input_tensors)
     for i in range(len(model_inputs)):
         model_inputs[i] = model_inputs[i].unsqueeze(0)
         if cfg.NUM_GPUS:
             model_inputs[i] = model_inputs[i].cuda(non_blocking=True)
 
-    inputs = (model_inputs,)
+    # If detection is enabled, count flops for one proposal.
+    if cfg.DETECTION.ENABLE:
+        bbox = torch.tensor([[0, 0, 1.0, 0, 1.0]])
+        if cfg.NUM_GPUS:
+            bbox = bbox.cuda()
+        inputs = (model_inputs, bbox)
+    else:
+        inputs = (model_inputs,)
     return inputs
 
 
-def get_model_stats(model, cfg, mode):
+def get_model_stats(model, cfg, mode, use_train_input):
     """
     Compute statistics for the current model given the config.
     Args:
@@ -111,7 +227,8 @@ def get_model_stats(model, cfg, mode):
             slowfast/config/defaults.py
         mode (str): Options include `flop` or `activation`. Compute either flop
             (gflops) or activation count (mega).
-
+        use_train_input (bool): if True, compute statistics for training. Otherwise,
+            compute statistics for testing.
     Returns:
         float: the total number of count of the given model.
     """
@@ -128,14 +245,13 @@ def get_model_stats(model, cfg, mode):
     # Evaluation mode can avoid getting stuck with sync batchnorm.
     model_mode = model.training
     model.eval()
-    inputs = _get_model_analysis_input(cfg)
+    inputs = _get_model_analysis_input(cfg, use_train_input)
     count_dict, *_ = model_stats_fun(model, inputs)
     count = sum(count_dict.values())
     model.train(model_mode)
     return count
 
-
-def log_model_info(model, cfg):
+def log_model_info(model, cfg, use_train_input=True):
     """
     Log info, includes number of parameters, gpu usage, gflops and activation count.
         The model info is computed when the model is in validation mode.
@@ -143,18 +259,20 @@ def log_model_info(model, cfg):
         model (model): model to log the info.
         cfg (CfgNode): configs. Details can be found in
             slowfast/config/defaults.py
+        use_train_input (bool): if True, log info for training. Otherwise,
+            log info for testing.
     """
     logger.info("Model:\n{}".format(model))
     logger.info("Params: {:,}".format(params_count(model)))
     logger.info("Mem: {:,} MB".format(gpu_mem_usage()))
     logger.info(
         "Flops: {:,} G".format(
-            get_model_stats(model, cfg, "flop")
+            get_model_stats(model, cfg, "flop", use_train_input)
         )
     )
     logger.info(
         "Activations: {:,} M".format(
-            get_model_stats(model, cfg, "activation")
+            get_model_stats(model, cfg, "activation", use_train_input)
         )
     )
     logger.info("nvidia-smi")

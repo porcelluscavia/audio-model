@@ -39,6 +39,98 @@ _C.BN.NUM_SPLITS = 1
 _C.BN.NUM_SYNC_DEVICES = 1
 
 
+# -----------------------------------------------------------------------------
+# Data options
+# -----------------------------------------------------------------------------
+_C.DATA = CfgNode()
+
+# The path to the data directory.
+_C.DATA.PATH_TO_DATA_DIR = ""
+
+# The separator used between path and label.
+_C.DATA.PATH_LABEL_SEPARATOR = " "
+
+# Video path prefix if any.
+_C.DATA.PATH_PREFIX = ""
+
+# The number of frames of the input clip.
+_C.DATA.NUM_FRAMES = 1
+
+# The video sampling rate of the input clip.
+_C.DATA.SAMPLING_RATE = 1
+
+# Eigenvalues for PCA jittering. Note PCA is RGB based.
+_C.DATA.TRAIN_PCA_EIGVAL = [0.225, 0.224, 0.229]
+
+# Eigenvectors for PCA jittering.
+_C.DATA.TRAIN_PCA_EIGVEC = [
+    [-0.5675, 0.7192, 0.4009],
+    [-0.5808, -0.0045, -0.8140],
+    [-0.5836, -0.6948, 0.4203],
+]
+
+# If a imdb have been dumpped to a local file with the following format:
+# `{"im_path": im_path, "class": cont_id}`
+# then we can skip the construction of imdb and load it from the local file.
+_C.DATA.PATH_TO_PRELOAD_IMDB = ""
+
+# The mean value of the video raw pixels across the R G B channels.
+_C.DATA.MEAN = [0.45, 0.45, 0.45]
+# List of input frame channel dimensions.
+
+_C.DATA.INPUT_CHANNEL_NUM = [3, 3]
+
+# The std value of the video raw pixels across the R G B channels.
+_C.DATA.STD = [0.225, 0.225, 0.225]
+
+# The spatial augmentation jitter scales for training.
+_C.DATA.TRAIN_JITTER_SCALES = [256, 320]
+
+# The relative scale range of Inception-style area based random resizing augmentation.
+# If this is provided, DATA.TRAIN_JITTER_SCALES above is ignored.
+_C.DATA.TRAIN_JITTER_SCALES_RELATIVE = []
+
+# The relative aspect ratio range of Inception-style area based random resizing
+# augmentation.
+_C.DATA.TRAIN_JITTER_ASPECT_RELATIVE = []
+
+# If True, perform stride length uniform temporal sampling.
+_C.DATA.USE_OFFSET_SAMPLING = False
+
+# Whether to apply motion shift for augmentation.
+_C.DATA.TRAIN_JITTER_MOTION_SHIFT = False
+
+# The spatial crop size for training.
+_C.DATA.TRAIN_CROP_SIZE = 224
+
+# The spatial crop size for testing.
+_C.DATA.TEST_CROP_SIZE = 256
+
+# Input videos may has different fps, convert it to the target video fps before
+# frame sampling.
+_C.DATA.TARGET_FPS = 30
+
+# Decoding backend, options include `pyav` or `torchvision`
+_C.DATA.DECODING_BACKEND = "pyav"
+
+# if True, sample uniformly in [1 / max_scale, 1 / min_scale] and take a
+# reciprocal to get the scale. If False, take a uniform sample from
+# [min_scale, max_scale].
+_C.DATA.INV_UNIFORM_SAMPLE = False
+
+# If True, perform random horizontal flip on the video frames during training.
+_C.DATA.RANDOM_FLIP = True
+
+# If True, calculdate the map as metric.
+_C.DATA.MULTI_LABEL = False
+
+# Method to perform the ensemble, options include "sum" and "max".
+_C.DATA.ENSEMBLE_METHOD = "sum"
+
+# If True, revert the default input channel (RBG <-> BGR).
+_C.DATA.REVERSE_INPUT_CHANNEL = False
+
+
 # ---------------------------------------------------------------------------- #
 # Training options.
 # ---------------------------------------------------------------------------- #
@@ -436,7 +528,7 @@ _C.TENSORBOARD.HISTOGRAM.FIGSIZE = [8, 8]
 _C.TENSORBOARD.MODEL_VIS = CfgNode()
 
 # If False, skip model visualization.
-_C.TENSORBOARD.MODEL_VIS.ENABLE = False
+_C.TENSORBOARD.MODEL_VIS.ENABLE = True
 
 # If False, skip visualizing model weights.
 _C.TENSORBOARD.MODEL_VIS.MODEL_WEIGHTS = False
@@ -473,6 +565,17 @@ _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = []
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL = False
 # Colormap to for text boxes and bounding boxes colors
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.COLORMAP = "viridis"
+
+
+# Config for visualization for wrong prediction visualization.
+# _C.TENSORBOARD.ENABLE must be True.
+_C.TENSORBOARD.WRONG_PRED_VIS = CfgNode()
+_C.TENSORBOARD.WRONG_PRED_VIS.ENABLE = False
+# Folder tag to origanize model eval videos under.
+_C.TENSORBOARD.WRONG_PRED_VIS.TAG = "Incorrectly classified videos."
+# Subset of labels to visualize. Only wrong predictions with true labels
+# within this subset is visualized.
+_C.TENSORBOARD.WRONG_PRED_VIS.SUBSET_PATH = ""
 
 
 # -----------------------------------------------------------------------------
