@@ -16,6 +16,7 @@ import slowfast.visualization.tensorboard_vis as tb
 from slowfast.datasets import loader
 from slowfast.models import build_model
 from slowfast.visualization.gradcam_utils import GradCAM
+from slowfast.utils.meters import TestMeter, EPICTestMeter
 from slowfast.visualization.prediction_vis import WrongPredictionVis
 from slowfast.visualization.utils import (
     GetWeightAndActivation,
@@ -274,16 +275,44 @@ def visualize(cfg):
         # Build the video model and print model statistics.
         model = build_model(cfg)
         model.eval()
-        if du.is_master_proc() and cfg.LOG_MODEL_INFO:
-            misc.log_model_info(model, cfg, use_train_input=False)
+        # if du.is_master_proc() and cfg.LOG_MODEL_INFO:
+        #     misc.log_model_info(model, cfg, use_train_input=False)
 
         cu.load_test_checkpoint(cfg, model)
 
         # Create video testing loaders.
         vis_loader = loader.construct_loader(cfg, "test")
+        #
+        # if cfg.DETECTION.ENABLE:
+        #     assert cfg.NUM_GPUS == cfg.TEST.BATCH_SIZE or cfg.NUM_GPUS == 0
 
-        if cfg.DETECTION.ENABLE:
-            assert cfg.NUM_GPUS == cfg.TEST.BATCH_SIZE or cfg.NUM_GPUS == 0
+        logger.info("Testing model for {} iterations".format(len(vis_loader)))
+
+        assert (
+            len(vis_loader.dataset)
+            % cfg.TEST.NUM_ENSEMBLE_VIEWS
+            == 0
+        )
+        # Create meters for multi-view testing.
+        if cfg.TEST.DATASET == 'epickitchens':
+            test_meter = EPICTestMeter(
+                len(vis_loader.dataset)
+                // cfg.TEST.NUM_ENSEMBLE_VIEWS,
+                cfg.TEST.NUM_ENSEMBLE_VIEWS,
+                cfg.MODEL.NUM_CLASSES,
+                len(vis_loader),
+                cfg.DATA.ENSEMBLE_METHOD,
+            )
+        else:
+            test_meter = TestMeter(
+                len(vis_loader.dataset)
+                // cfg.TEST.NUM_ENSEMBLE_VIEWS,
+                cfg.TEST.NUM_ENSEMBLE_VIEWS,
+                cfg.MODEL.NUM_CLASSES[0],
+                len(vis_loader),
+                cfg.DATA.MULTI_LABEL,
+                cfg.DATA.ENSEMBLE_METHOD,
+            )
 
         # Set up writer for logging to Tensorboard format.
         if du.is_master_proc(cfg.NUM_GPUS * cfg.NUM_SHARDS):
