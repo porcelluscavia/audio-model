@@ -40,6 +40,23 @@ def pack_pathway_output(cfg, spectrogram):
         )
     return spectrogram_list
 
+def revert_tensor_normalize(tensor, mean, std):
+    """
+    Revert normalization for a given tensor by multiplying by the std and adding the mean.
+    Args:
+        tensor (tensor): tensor to revert normalization.
+        mean (tensor or list): mean value to add.
+        std (tensor or list): std to multiply.
+    """
+    if type(mean) == list:
+        mean = torch.tensor(mean)
+    if type(std) == list:
+        std = torch.tensor(std)
+    tensor = tensor * std
+    tensor = tensor + mean
+    return tensor
+
+
 
 def create_sampler(dataset, shuffle, cfg):
     """

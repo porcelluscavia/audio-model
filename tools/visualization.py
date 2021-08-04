@@ -26,6 +26,31 @@ from slowfast.visualization.video_visualizer import VideoVisualizer
 
 logger = logging.get_logger(__name__)
 
+# model.eval()
+#
+# test_meter.iter_tic()
+#
+# for cur_iter, (inputs, labels, audio_idx, meta) in enumerate(test_loader):
+#     if cfg.NUM_GPUS:
+#         # Transfer the data to the current GPU device.
+#         if isinstance(inputs, (list,)):
+#             for i in range(len(inputs)):
+#                 inputs[i] = inputs[i].cuda(non_blocking=True)
+#         else:
+#             inputs = inputs.cuda(non_blocking=True)
+#
+#         # Transfer the data to the current GPU device.
+#         if isinstance(labels, (dict,)):
+#             labels = {k: v.cuda() for k, v in labels.items()}
+#         else:
+#             labels = labels.cuda()
+#         audio_idx = audio_idx.cuda()
+#     test_meter.data_toc()
+#
+#     # Perform the forward pass.
+#     # Inputs has size 1 x 32 x [64, 32, 32]
+#     preds = model(inputs)
+
 
 def run_visualization(vis_loader, model, cfg, writer=None):
     """
@@ -39,6 +64,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
         writer (TensorboardWriter, optional): TensorboardWriter object
             to writer Tensorboard log.
     """
+
     n_devices = cfg.NUM_GPUS * cfg.NUM_SHARDS
     prefix = "module/" if n_devices > 1 else ""
     # Get a list of selected layer names and indexing.
@@ -106,6 +132,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                 inputs, preds = gradcam(inputs, labels=labels)
             else:
                 inputs, preds = gradcam(inputs)
+
         if cfg.NUM_GPUS:
             inputs = du.all_gather_unaligned(inputs)
             activations = du.all_gather_unaligned(activations)
@@ -116,7 +143,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                         inputs[i][j] = inputs[i][j].cpu()
             else:
                 inputs = [inp.cpu() for inp in inputs]
-            preds = [pred.cpu() for pred in preds]
+            preds = [pred.cpu() for pred in preds[0]]
         else:
             inputs, activations, preds = [inputs], [activations], [preds]
 
@@ -174,17 +201,21 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 .unsqueeze(0)
                             )
                             writer.add_video(
+
                                 video,
                                 tag="Input {}/Pathway {}".format(
                                     global_idx, path_idx + 1
                                 ),
                             )
                     if cfg.TENSORBOARD.MODEL_VIS.ACTIVATIONS:
+
                         writer.plot_weights_and_activations(
                             cur_activations,
                             tag="Input {}/Activations: ".format(global_idx),
                             batch_idx=cur_batch_idx,
                             indexing_dict=indexing_dict,
+
+
                         )
 
 
@@ -282,6 +313,7 @@ def visualize(cfg):
 
         # Create video testing loaders.
         vis_loader = loader.construct_loader(cfg, "test")
+
         #
         # if cfg.DETECTION.ENABLE:
         #     assert cfg.NUM_GPUS == cfg.TEST.BATCH_SIZE or cfg.NUM_GPUS == 0
@@ -304,11 +336,20 @@ def visualize(cfg):
                 cfg.DATA.ENSEMBLE_METHOD,
             )
         else:
+            # test_meter = TestMeter(
+            #     len(vis_loader.dataset)
+            #     // cfg.TEST.NUM_ENSEMBLE_VIEWS,
+            #     cfg.TEST.NUM_ENSEMBLE_VIEWS,
+            #     cfg.MODEL.NUM_CLASSES[0],
+            #     len(vis_loader),
+            #     cfg.DATA.MULTI_LABEL,
+            #     cfg.DATA.ENSEMBLE_METHOD,
+
             test_meter = TestMeter(
                 len(vis_loader.dataset)
                 // cfg.TEST.NUM_ENSEMBLE_VIEWS,
                 cfg.TEST.NUM_ENSEMBLE_VIEWS,
-                cfg.MODEL.NUM_CLASSES[0],
+                cfg.MODEL.NUM_CLASSES,
                 len(vis_loader),
                 cfg.DATA.MULTI_LABEL,
                 cfg.DATA.ENSEMBLE_METHOD,
@@ -324,6 +365,7 @@ def visualize(cfg):
             logger.info(
                 "Visualizing class-level performance from saved results..."
             )
+
             if writer is not None:
                 with g_pathmgr.open(
                     cfg.TENSORBOARD.PREDICTIONS_PATH, "rb"

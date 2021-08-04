@@ -242,6 +242,8 @@ class GetWeightAndActivation:
         weights = {}
         for layer in self.layers_names:
             cur_layer = get_layer(self.model, layer)
+            # import pdb
+            # pdb.set_trace()
             if hasattr(cur_layer, "weight"):
                 weights[layer] = cur_layer.weight.clone().detach()
             else:
@@ -331,6 +333,8 @@ def get_layer(model, layer_name):
     Returns:
         prev_module (nn.Module): the layer from the model with `layer_name` name.
     """
+    # import pdb
+    # pdb.set_trace()
     layer_ls = layer_name.split("/")
     prev_module = model
     for layer in layer_ls:

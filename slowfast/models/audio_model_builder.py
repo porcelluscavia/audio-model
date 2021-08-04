@@ -298,7 +298,8 @@ class SlowFast(nn.Module):
                 width_per_group * 32,
                 width_per_group * 32 // cfg.SLOWFAST.BETA_INV,
             ],
-            num_classes=cfg.MODEL.NUM_CLASSES if len(cfg.MODEL.NUM_CLASSES) > 1 else cfg.MODEL.NUM_CLASSES[0],
+            num_classes=cfg.MODEL.NUM_CLASSES,
+            # if len(cfg.MODEL.NUM_CLASSES) > 1 else cfg.MODEL.NUM_CLASSES[0],
             pool_size=[
                 [
                     cfg.AUDIO_DATA.NUM_FRAMES

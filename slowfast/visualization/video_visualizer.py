@@ -399,6 +399,8 @@ class VideoVisualizer:
         Args:
             class_id (int): class id.
         """
+        # import pdb
+        # pdb.set_trace()
         return self.color_map(class_id / self.num_classes)[:3]
 
     def draw_one_frame(

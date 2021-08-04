@@ -85,7 +85,9 @@ class GradCAM:
         preds = self.model(input_clone)
 
         if labels is None:
-            score = torch.max(preds, dim=-1)[0]
+            # import pdb
+            # pdb.set_trace()
+            score = torch.max(preds[0], dim=-1)[0]
         else:
             if labels.ndim == 1:
                 labels = labels.unsqueeze(-1)
@@ -96,15 +98,25 @@ class GradCAM:
         score.backward()
         localization_maps = []
         for i, inp in enumerate(inputs):
+            inp = inp[ : , : ,None, :, :]
+            # import pdb
+            # pdb.set_trace()
             _, _, T, H, W = inp.size()
 
             gradients = self.gradients[self.target_layers[i]]
             activations = self.activations[self.target_layers[i]]
+
+
+            gradients = gradients[:, :, None, :, :]
+            activations = activations[:, :, None, :, :]
+
             B, C, Tg, _, _ = gradients.size()
 
             weights = torch.mean(gradients.view(B, C, Tg, -1), dim=3)
 
             weights = weights.view(B, C, Tg, 1, 1)
+            # import pdb
+            # pdb.set_trace()
             localization_map = torch.sum(
                 weights * activations, dim=1, keepdim=True
             )
@@ -163,7 +175,8 @@ class GradCAM:
             heatmap = self.colormap(localization_map)
             heatmap = heatmap[:, :, :, :, :3]
             # Permute input from (B, C, T, H, W) to (B, T, H, W, C)
-            curr_inp = inputs[i].permute(0, 2, 3, 4, 1)
+            inp = inputs[i][:, :, None, :, :]
+            curr_inp = inp.permute(0, 2, 3, 4, 1)
             if curr_inp.device != torch.device("cpu"):
                 curr_inp = curr_inp.cpu()
             curr_inp = data_utils.revert_tensor_normalize(

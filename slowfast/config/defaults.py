@@ -155,7 +155,7 @@ _C.MODEL.ARCH = "slowfast"
 _C.MODEL.MODEL_NAME = "SlowFast"
 
 # The number of classes to predict for the model.
-_C.MODEL.NUM_CLASSES = [400, ]
+_C.MODEL.NUM_CLASSES = 309
 
 # Loss function.
 _C.MODEL.LOSS_FUNC = "cross_entropy"
@@ -515,7 +515,7 @@ _C.TENSORBOARD.LOG_DIR = ""
 # in the format {"class_name1": id1, "class_name2": id2, ...}.
 # This file must be provided to enable plotting confusion matrix
 # by a subset or parent categories.
-_C.TENSORBOARD.CLASS_NAMES_PATH = ""
+_C.TENSORBOARD.CLASS_NAMES_PATH = "/home/stureski/embeddings_data/vgg_labels_tensorboard.json"
 
 # Path to a json file for categories -> classes mapping
 # in the format {"parent_class": ["child_class1", "child_class2",...], ...}.
@@ -524,12 +524,12 @@ _C.TENSORBOARD.CATEGORIES_PATH = ""
 # Config for confusion matrices visualization.
 _C.TENSORBOARD.CONFUSION_MATRIX = CfgNode()
 # Visualize confusion matrix.
-_C.TENSORBOARD.CONFUSION_MATRIX.ENABLE = False
+_C.TENSORBOARD.CONFUSION_MATRIX.ENABLE = True
 # Figure size of the confusion matrices plotted.
 _C.TENSORBOARD.CONFUSION_MATRIX.FIGSIZE = [8, 8]
 # Path to a subset of categories to visualize.
 # File contains class names separated by newline characters.
-_C.TENSORBOARD.CONFUSION_MATRIX.SUBSET_PATH = ""
+_C.TENSORBOARD.CONFUSION_MATRIX.SUBSET_PATH = "/home/stureski/embeddings_data/chosen_classes.txt"
 
 # Config for histogram visualization.
 _C.TENSORBOARD.HISTOGRAM = CfgNode()
@@ -537,7 +537,7 @@ _C.TENSORBOARD.HISTOGRAM = CfgNode()
 _C.TENSORBOARD.HISTOGRAM.ENABLE = False
 # Path to a subset of classes to plot histograms.
 # Class names must be separated by newline characters.
-_C.TENSORBOARD.HISTOGRAM.SUBSET_PATH = ""
+_C.TENSORBOARD.HISTOGRAM.SUBSET_PATH = "/home/stureski/embeddings_data/chosen_classes.txt"
 # Visualize top-k most predicted classes on histograms for each
 # chosen true label.
 _C.TENSORBOARD.HISTOGRAM.TOPK = 10
@@ -552,13 +552,13 @@ _C.TENSORBOARD.MODEL_VIS = CfgNode()
 _C.TENSORBOARD.MODEL_VIS.ENABLE = True
 
 # If False, skip visualizing model weights.
-_C.TENSORBOARD.MODEL_VIS.MODEL_WEIGHTS = False
+_C.TENSORBOARD.MODEL_VIS.MODEL_WEIGHTS = True
 
 # If False, skip visualizing model activations.
-_C.TENSORBOARD.MODEL_VIS.ACTIVATIONS = False
+_C.TENSORBOARD.MODEL_VIS.ACTIVATIONS = True
 
 # If False, skip visualizing input videos.
-_C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = False
+_C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = True
 
 
 # List of strings containing data about layer names and their indexing to
@@ -568,7 +568,7 @@ _C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = False
 # For each string, layer name and indexing is separated by whitespaces.
 # e.g.: [layer1 1,2;1,2, layer2, layer3 150,151;3,4]; this means for each array `arr`
 # along the batch dimension in `layer1`, we take arr[[1, 2], [1, 2]]
-_C.TENSORBOARD.MODEL_VIS.LAYER_LIST = []
+_C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
 # Top-k predictions to plot on videos
 _C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 1
 # Colormap to for text boxes and bounding boxes colors
@@ -580,7 +580,7 @@ _C.TENSORBOARD.MODEL_VIS.GRAD_CAM = CfgNode()
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE = True
 # CNN layers to use for Grad-CAM. The number of layers must be equal to
 # number of pathway(s).
-_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = [4, 4]
+_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
 # If True, visualize Grad-CAM using true labels for each instances.
 # If False, use the highest predicted class.
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL = False

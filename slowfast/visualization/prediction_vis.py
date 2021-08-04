@@ -126,6 +126,7 @@ class WrongPredictionVis:
         incorrect_class_names = [
             self.class_names[i] for i in self.model_incorrect_classes
         ]
+
         return list(set(incorrect_class_names))
 
     def clean(self):
