@@ -11,6 +11,7 @@ import slowfast.datasets.utils as data_utils
 import slowfast.utils.checkpoint as cu
 import slowfast.utils.distributed as du
 import slowfast.utils.logging as logging
+from slowfast.utils.misc import get_class_names
 import slowfast.utils.misc as misc
 import slowfast.visualization.tensorboard_vis as tb
 from slowfast.datasets import loader
@@ -23,6 +24,7 @@ from slowfast.visualization.utils import (
     process_layer_index_data,
 )
 from slowfast.visualization.video_visualizer import VideoVisualizer
+import slowfast.datasets.audio_loader_vggsound as audio_vgg
 
 logger = logging.get_logger(__name__)
 
@@ -50,6 +52,7 @@ logger = logging.get_logger(__name__)
 #     # Perform the forward pass.
 #     # Inputs has size 1 x 32 x [64, 32, 32]
 #     preds = model(inputs)
+
 
 
 def run_visualization(vis_loader, model, cfg, writer=None):
@@ -81,11 +84,13 @@ def run_visualization(vis_loader, model, cfg, writer=None):
             layer_weights, tag="Layer Weights/", heat_map=False
         )
 
+    # classes_list = get_class_names(cfg.TENSORBOARD.CLASS_NAMES_PATH)
+
     video_vis = VideoVisualizer(
         cfg.MODEL.NUM_CLASSES,
         cfg.TENSORBOARD.CLASS_NAMES_PATH,
         cfg.TENSORBOARD.MODEL_VIS.TOPK_PREDS,
-        cfg.TENSORBOARD.MODEL_VIS.COLORMAP,
+        cfg.TENSORBOARD.MODEL_VIS.COLORMAP
     )
     if n_devices > 1:
         grad_cam_layer_ls = [
@@ -106,6 +111,14 @@ def run_visualization(vis_loader, model, cfg, writer=None):
     logger.info("Finish drawing weights.")
     global_idx = -1
     for inputs, labels, _, meta in tqdm.tqdm(vis_loader):
+
+        # len(inputs[0])
+        # 2
+        # inputs[0][0].shape
+        # torch.Size([10, 1, 3, 128, 128])
+
+        # import pdb
+        # pdb.set_trace()
         if cfg.NUM_GPUS:
             # Transfer the data to the current GPU device.
             if isinstance(inputs, (list,)):
@@ -131,6 +144,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
             if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL:
                 inputs, preds = gradcam(inputs, labels=labels)
             else:
+                #inputs/outputs here are by batch?
                 inputs, preds = gradcam(inputs)
 
         if cfg.NUM_GPUS:
@@ -199,14 +213,21 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 torch.from_numpy(np.array(video))
                                 .permute(0, 3, 1, 2)
                                 .unsqueeze(0)
+                                #adds extra dimension in the beginning
                             )
-                            writer.add_video(
+                            # import pdb
+                            # pdb.set_trace()
 
+                            recovered_audio = audio_vgg.recover_audio(video)
+                            writer.add_audio(recovered_audio, tag="Input {}/Pathway {}".format(global_idx))
+                            writer.add_video(
+                                #change this to print the name of the label- if not through the predicition, through a concurrent for loop
                                 video,
-                                tag="Input {}/Pathway {}".format(
+                                tag="Input {}/Pathway {}/hi".format(
                                     global_idx, path_idx + 1
                                 ),
                             )
+
                     if cfg.TENSORBOARD.MODEL_VIS.ACTIVATIONS:
 
                         writer.plot_weights_and_activations(

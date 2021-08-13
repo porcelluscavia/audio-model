@@ -4,6 +4,7 @@ import torch
 import os
 
 
+
 def get_start_end_idx(audio_size, clip_size, clip_idx, num_clips):
     """
     Sample a clip of size clip_size from an audio of size audio_size and
@@ -63,6 +64,9 @@ def _log_specgram(cfg, audio, window_size=10,
                 hop_length=noverlap,
                 win_length=nperseg,
                 pad_mode='constant')
+
+    #what is the dimension of spec?
+
     mel_basis = filters.mel(sr=cfg.AUDIO_DATA.SAMPLING_RATE,
                             n_fft=2048,
                             n_mels=128,
@@ -72,6 +76,7 @@ def _log_specgram(cfg, audio, window_size=10,
 
     # log-mel-spec
     log_mel_spec = np.log(mel_spec + eps)
+
     return log_mel_spec.T
 
 
@@ -90,3 +95,27 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx):
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                                     )
     return torch.tensor(spectrogram).unsqueeze(0)
+
+
+def recover_audio(audio_tensor, eps=1e-6):
+    from librosa import feature
+    #feed the untouched spectrogram in instead? but gradcam makes filters on the mel spectrogram
+
+    #this audio is a spectrogram with mel filter applied to it
+    audio_tensor = torch.squeeze(audio_tensor)
+    #is it the right shape now?
+    log_mel_array = audio_tensor.cpu().detach().numpy()
+    # import pdb
+    # pdb.set_trace()
+    #All 3 arrays returned are identical
+    mel_array = np.exp(log_mel_array) - eps
+    recovered_audio = feature.inverse.mel_to_audio(mel_array[0])
+
+
+    #TODO later: make sure the incoming audio is just thresholded masked, not everything in full
+    #TODO later later: improve the audio by lossless format? or NN's?
+    return recovered_audio
+
+
+
+

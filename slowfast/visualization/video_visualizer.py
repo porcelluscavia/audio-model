@@ -578,7 +578,7 @@ class VideoVisualizer:
         repeat_frame=1,
     ):
         """
-        Draw predicted labels or ground truth classes to clip. Draw bouding boxes to clip
+        Draw predicted labels or ground truth classes to clip. Draw bounding boxes to clip
         if bboxes is provided. Boxes will gradually fade in and out the clip, centered around
         the clip's central frame.
         Args:

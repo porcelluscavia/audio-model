@@ -4,6 +4,7 @@
 import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 import slowfast.datasets.utils as data_utils
 from slowfast.visualization.utils import get_layer
@@ -67,7 +68,7 @@ class GradCAM:
         for layer_name in self.target_layers:
             self._register_single_hook(layer_name=layer_name)
 
-    def _calculate_localization_map(self, inputs, labels=None):
+    def _calculate_localization_map(self, inputs, labels=None, binary_mask = True):
         """
         Calculate localization map for all inputs with Grad-CAM.
         Args:
@@ -145,11 +146,30 @@ class GradCAM:
             localization_map = (localization_map - localization_map_min) / (
                 localization_map_max - localization_map_min + 1e-6
             )
-            localization_map = localization_map.data
 
-            localization_maps.append(localization_map)
+            #get mean value for each image and restrict only values higher than the mean
+            if binary_mask:
+                #flatten each instance before getting average. Here: 10 inputs of size 16384
+                flat_map = torch.flatten(localization_map, 1, 4)
+                #10 average values for 10 inputs
+                mean_per_input = torch.mean(flat_map, 1)
+                mean_per_input = mean_per_input.reshape(10, 1)
+                mean_per_input = mean_per_input.expand(10, flat_map.shape[1])
+                #array of 1s and 0s, 1 if the element was greater than the gradcam mean for that image
+                masked_map = torch.gt(flat_map, mean_per_input).int()
+                #return to the original shape
+                masked_map = masked_map.reshape(localization_map.shape)
 
-        return localization_maps, preds
+                localization_maps.append(masked_map)
+                return localization_maps, preds
+
+            else:
+                localization_map = localization_map.data
+                localization_maps.append(localization_map)
+                return localization_maps, preds
+
+
+
 
     def __call__(self, inputs, labels=None, alpha=0.5):
         """
@@ -186,6 +206,7 @@ class GradCAM:
             curr_inp = alpha * heatmap + (1 - alpha) * curr_inp
             # Permute inp to (B, T, C, H, W)
             curr_inp = curr_inp.permute(0, 1, 4, 2, 3)
+
             result_ls.append(curr_inp)
 
         return result_ls, preds

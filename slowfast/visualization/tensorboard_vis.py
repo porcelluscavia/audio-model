@@ -99,9 +99,21 @@ class TensorboardWriter(object):
             global_step(Optional[int]): current step.
             fps (int): frames per second.
         """
-        import pdb
-        pdb.set_trace()
+
         self.writer.add_video(tag, vid_tensor, global_step=global_step, fps=fps)
+
+    def add_audio(self, vid_tensor, tag="Audio Input"):
+        """
+        Add input to tensorboard SummaryWriter as a video.
+        Args:
+            vid_tensor (tensor): shape of (B, T, C, H, W). Values should lie
+                [0, 255] for type uint8 or [0, 1] for type float.
+            tag (Optional[str]): name of the video.
+            global_step(Optional[int]): current step.
+            fps (int): frames per second.
+        """
+
+        self.writer.add_audio(tag, vid_tensor)
 
     def plot_eval(self, preds, labels, global_step=None):
         """

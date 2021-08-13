@@ -524,7 +524,7 @@ _C.TENSORBOARD.CATEGORIES_PATH = ""
 # Config for confusion matrices visualization.
 _C.TENSORBOARD.CONFUSION_MATRIX = CfgNode()
 # Visualize confusion matrix.
-_C.TENSORBOARD.CONFUSION_MATRIX.ENABLE = True
+_C.TENSORBOARD.CONFUSION_MATRIX.ENABLE = False
 # Figure size of the confusion matrices plotted.
 _C.TENSORBOARD.CONFUSION_MATRIX.FIGSIZE = [8, 8]
 # Path to a subset of categories to visualize.
