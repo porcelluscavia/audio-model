@@ -477,9 +477,9 @@ _C.EPICKITCHENS.TEST_SPLIT = "validation"
 # -----------------------------------------------------------------------------
 _C.VGGSOUND = CfgNode()
 
-_C.VGGSOUND.AUDIO_DATA_DIR = ""
+_C.VGGSOUND.AUDIO_DATA_DIR = "/home/askoepke97/shared-datasets/VGGSound/audio"
 
-_C.VGGSOUND.ANNOTATIONS_DIR = ""
+_C.VGGSOUND.ANNOTATIONS_DIR = "/home/stureski/annotations"
 
 _C.VGGSOUND.EMBEDDINGS_FILE_TRAIN = ""
 
@@ -568,6 +568,8 @@ _C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = True
 # For each string, layer name and indexing is separated by whitespaces.
 # e.g.: [layer1 1,2;1,2, layer2, layer3 150,151;3,4]; this means for each array `arr`
 # along the batch dimension in `layer1`, we take arr[[1, 2], [1, 2]]
+
+# How do I print out entire architechture of model?
 _C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
 # Top-k predictions to plot on videos
 _C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 1
@@ -581,6 +583,7 @@ _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE = True
 # CNN layers to use for Grad-CAM. The number of layers must be equal to
 # number of pathway(s).
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
+
 # If True, visualize Grad-CAM using true labels for each instances.
 # If False, use the highest predicted class.
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL = False

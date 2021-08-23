@@ -112,13 +112,11 @@ def run_visualization(vis_loader, model, cfg, writer=None):
     global_idx = -1
     for inputs, labels, _, meta in tqdm.tqdm(vis_loader):
 
-        # len(inputs[0])
-        # 2
+        # The length of the inputs len(inputs[0]) is 2
         # inputs[0][0].shape
         # torch.Size([10, 1, 3, 128, 128])
 
-        # import pdb
-        # pdb.set_trace()
+
         if cfg.NUM_GPUS:
             # Transfer the data to the current GPU device.
             if isinstance(inputs, (list,)):
@@ -142,11 +140,14 @@ def run_visualization(vis_loader, model, cfg, writer=None):
             activations, preds = model_vis.get_activations(inputs)
         if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
             if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL:
-                inputs, preds = gradcam(inputs, labels=labels)
+                inputs, preds = gradcam(inputs, labels=labels, binary_mask = True)
             else:
                 #inputs/outputs here are by batch?
-                inputs, preds = gradcam(inputs)
+                old_inputs = inputs
+                inputs, preds = gradcam(old_inputs, binary_mask = False)
 
+                import pdb
+                pdb.set_trace()
         if cfg.NUM_GPUS:
             inputs = du.all_gather_unaligned(inputs)
             activations = du.all_gather_unaligned(activations)
@@ -168,12 +169,17 @@ def run_visualization(vis_loader, model, cfg, writer=None):
 
         if writer is not None:
             total_vids = 0
+
+
+            # Looping through each batch.
             for i in range(max(n_devices, 1)):
                 cur_input = inputs[i]
                 cur_activations = activations[i]
                 cur_batch_size = cur_input[0].shape[0]
                 cur_preds = preds[i]
                 cur_boxes = boxes[i]
+                audio_tensors = []
+                video_tensors = []
                 for cur_batch_idx in range(cur_batch_size):
                     global_idx += 1
                     total_vids += 1
@@ -181,6 +187,8 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                         cfg.TENSORBOARD.MODEL_VIS.INPUT_VIDEO
                         or cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE
                     ):
+                        # import pdb
+                        # pdb.set_trace()
                         for path_idx, input_pathway in enumerate(cur_input):
                             if cfg.TEST.DATASET == "ava" and cfg.AVA.BGR:
                                 video = input_pathway[
@@ -217,16 +225,20 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             )
                             # import pdb
                             # pdb.set_trace()
-
+                            # "video" should be a log-mel spectrogram with a GradCAM binary mask applied - resulting in only salient audio
                             recovered_audio = audio_vgg.recover_audio(video)
-                            writer.add_audio(recovered_audio, tag="Input {}/Pathway {}".format(global_idx))
+                            video_tensors.append(video)
+                            audio_tensors.append(recovered_audio)
+                            writer.add_audio(recovered_audio, tag="Input {}/Pathway{}".format(global_idx, path_idx + 1))
                             writer.add_video(
                                 #change this to print the name of the label- if not through the predicition, through a concurrent for loop
                                 video,
-                                tag="Input {}/Pathway {}/hi".format(
+                                tag="Input {}/Pathway {}".format(
                                     global_idx, path_idx + 1
                                 ),
                             )
+
+
 
                     if cfg.TENSORBOARD.MODEL_VIS.ACTIVATIONS:
 
@@ -238,6 +250,8 @@ def run_visualization(vis_loader, model, cfg, writer=None):
 
 
                         )
+            # import pdb
+            # pdb.set_trace()
 
 
 def perform_wrong_prediction_vis(vis_loader, model, cfg):

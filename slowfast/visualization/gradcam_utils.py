@@ -171,7 +171,7 @@ class GradCAM:
 
 
 
-    def __call__(self, inputs, labels=None, alpha=0.5):
+    def __call__(self, inputs, labels=None, alpha=0.5, binary_mask = False):
         """
         Visualize the localization maps on their corresponding inputs as heatmap,
         using Grad-CAM.
@@ -185,8 +185,7 @@ class GradCAM:
         """
         result_ls = []
         localization_maps, preds = self._calculate_localization_map(
-            inputs, labels=labels
-        )
+            inputs, labels=labels, binary_mask=binary_mask)
         for i, localization_map in enumerate(localization_maps):
             # Convert (B, 1, T, H, W) to (B, T, H, W)
             localization_map = localization_map.squeeze(dim=1)

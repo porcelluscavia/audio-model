@@ -98,6 +98,16 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx):
 
 
 def recover_audio(audio_tensor, eps=1e-6):
+    """
+    Reconstruct an audio file based on a spectrogram that has been numerically manipulated.
+       Args:
+           audio_tensor (torch Tensor): the manipulated spectrogram Tensor
+           eps (float): value added to original spectrogram to avoid division by zero
+
+       Returns:
+           recovered_audio (torch Tensor): the start sample index.
+       """
+
     from librosa import feature
     #feed the untouched spectrogram in instead? but gradcam makes filters on the mel spectrogram
 
