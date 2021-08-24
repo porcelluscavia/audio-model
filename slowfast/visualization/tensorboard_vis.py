@@ -6,7 +6,13 @@ import os
 import math
 import torch
 from torchvision.utils import make_grid
+import torchvision.io
 import matplotlib.pyplot as plt
+import librosa.display
+import io
+import PIL.Image
+from torchvision.transforms import ToTensor
+
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -16,6 +22,7 @@ from slowfast.utils.misc import get_class_names
 
 logger = logging.get_logger(__name__)
 log.getLogger("matplotlib").setLevel(log.ERROR)
+
 
 
 class TensorboardWriter(object):
@@ -102,6 +109,9 @@ class TensorboardWriter(object):
 
         self.writer.add_video(tag, vid_tensor, global_step=global_step, fps=fps)
 
+    def add_image(self, img_tensor, tag="Image Input", global_step=None):
+        self.writer.add_image(tag, img_tensor, global_step=global_step)
+
     def add_audio(self, vid_tensor, tag="Audio Input"):
         """
         Add input to tensorboard SummaryWriter as a video.
@@ -114,6 +124,36 @@ class TensorboardWriter(object):
         """
 
         self.writer.add_audio(tag, vid_tensor)
+
+    def add_waveplot(self, audio_array, tag="Waveplot Image"):
+        plot_buf = self.make_waveplot(audio_array)
+        # import pdb
+        # pdb.set_trace()
+
+        image = PIL.Image.open(plot_buf)
+        image = ToTensor()(image)
+        # Do I need to add the batch dimension? (if yes, see stackoverflow)
+
+        self.add_image(image, tag=tag)
+        return
+
+    def make_waveplot(self, tensor):
+        """
+        Render the amplitude envelope of a waveform.
+        Args:
+            tensor (tensor):
+        Returns:
+            waveplot (tensor): a 3D tensor. Result of applying heatmap to the 2D tensor.
+        """
+        #tensor = tensor.cpu().detach().numpy()
+
+        fig, ax = plt.subplots(nrows=1, sharex=True, sharey=True)
+        librosa.display.waveplot(tensor)
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        return buf
+
 
     def plot_eval(self, preds, labels, global_step=None):
         """
@@ -432,3 +472,4 @@ def add_heatmap(tensor):
     # Convert (H, W, C) to (C, H, W)
     heatmap = torch.Tensor(heatmap).permute(2, 0, 1)
     return heatmap
+

@@ -161,12 +161,13 @@ class GradCAM:
                 masked_map = masked_map.reshape(localization_map.shape)
 
                 localization_maps.append(masked_map)
-                return localization_maps, preds
+                # return localization_maps, preds
 
             else:
                 localization_map = localization_map.data
                 localization_maps.append(localization_map)
-                return localization_maps, preds
+
+        return localization_maps, preds
 
 
 

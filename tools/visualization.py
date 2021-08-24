@@ -146,8 +146,8 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                 old_inputs = inputs
                 inputs, preds = gradcam(old_inputs, binary_mask = False)
 
-                import pdb
-                pdb.set_trace()
+                # import pdb
+                # pdb.set_trace()
         if cfg.NUM_GPUS:
             inputs = du.all_gather_unaligned(inputs)
             activations = du.all_gather_unaligned(activations)
@@ -237,6 +237,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                     global_idx, path_idx + 1
                                 ),
                             )
+                            writer.add_waveplot(recovered_audio, tag="Input {}".format(global_idx))
 
 
 
