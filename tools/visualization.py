@@ -6,6 +6,7 @@ import pickle
 import torch
 import tqdm
 from iopath.common.file_io import g_pathmgr
+import logging as torch_log
 
 import slowfast.datasets.utils as data_utils
 import slowfast.utils.checkpoint as cu
@@ -174,6 +175,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
             # Looping through each batch.
             for i in range(max(n_devices, 1)):
                 cur_input = inputs[i]
+                orig_input = old_inputs[i]
                 cur_activations = activations[i]
                 cur_batch_size = cur_input[0].shape[0]
                 cur_preds = preds[i]
@@ -196,6 +198,10 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 ]
                             else:
                                 video = input_pathway[cur_batch_idx]
+                            # import pdb
+                            # pdb.set_trace()
+                            # orig_audio = audio_vgg.recover_audio(orig_input[global_idx])
+                            # writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
 
                             if not cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
                                 # Permute to (T, H, W, C) from (C, T, H, W).
@@ -223,8 +229,8 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 .unsqueeze(0)
                                 #adds extra dimension in the beginning
                             )
-                            # import pdb
-                            # pdb.set_trace()
+                            import pdb
+                            pdb.set_trace()
                             # "video" should be a log-mel spectrogram with a GradCAM binary mask applied - resulting in only salient audio
                             recovered_audio = audio_vgg.recover_audio(video)
                             video_tensors.append(video)
@@ -237,7 +243,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                     global_idx, path_idx + 1
                                 ),
                             )
-                            writer.add_waveplot(recovered_audio, tag="Input {}".format(global_idx))
+                            writer.add_waveplot(recovered_audio, tag="Input {}/Pathway{}".format(global_idx, path_idx + 1))
 
 
 
@@ -338,6 +344,7 @@ def visualize(cfg):
         # Print config.
         logger.info("Model Visualization with config:")
         logger.info(cfg)
+        torch_log.getLogger('PIL').setLevel(torch_log.WARNING)
 
         # Build the video model and print model statistics.
         model = build_model(cfg)

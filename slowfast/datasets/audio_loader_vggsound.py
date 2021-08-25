@@ -100,6 +100,7 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx):
 def recover_audio(audio_tensor, eps=1e-6):
     """
     Reconstruct an audio file based on a spectrogram that has been numerically manipulated.
+    It should come in with shape torch.Size([1, 1, 3, 128, 128].
        Args:
            audio_tensor (torch Tensor): the manipulated spectrogram Tensor
            eps (float): value added to original spectrogram to avoid division by zero

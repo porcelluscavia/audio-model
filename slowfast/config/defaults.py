@@ -521,6 +521,12 @@ _C.TENSORBOARD.CLASS_NAMES_PATH = "/home/stureski/embeddings_data/vgg_labels_ten
 # in the format {"parent_class": ["child_class1", "child_class2",...], ...}.
 _C.TENSORBOARD.CATEGORIES_PATH = ""
 
+# Config for making reconstructed audio clip.
+_C.TENSORBOARD.AUDIO_RECONSTRUCTIONS = CfgNode()
+# Add reconstructed audio clip. to Tensorboard.
+_C.TENSORBOARD.AUDIO_RECONSTRUCTIONS.ENABLE = True
+
+
 # Config for confusion matrices visualization.
 _C.TENSORBOARD.CONFUSION_MATRIX = CfgNode()
 # Visualize confusion matrix.
@@ -570,6 +576,7 @@ _C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = True
 # along the batch dimension in `layer1`, we take arr[[1, 2], [1, 2]]
 
 # How do I print out entire architechture of model?
+# _C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['head/pathway0_avgpool', 'head/pathway1_avgpool']
 _C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
 # Top-k predictions to plot on videos
 _C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 1
@@ -582,6 +589,7 @@ _C.TENSORBOARD.MODEL_VIS.GRAD_CAM = CfgNode()
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE = True
 # CNN layers to use for Grad-CAM. The number of layers must be equal to
 # number of pathway(s).
+# _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = ['head/pathway0_avgpool', 'head/pathway1_avgpool']
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
 
 # If True, visualize Grad-CAM using true labels for each instances.
@@ -590,10 +598,17 @@ _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL = False
 # Colormap to for text boxes and bounding boxes colors
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.COLORMAP = "viridis"
 
+# Visualize amplitude envelope of raw audio outputted by GradCAM.
+_C.TENSORBOARD.MODEL_VIS.WAVEPLOT = CfgNode()
+# If False, skip making waveplots on Tensorboard.
+_C.TENSORBOARD.MODEL_VIS.WAVEPLOT.ENABLE = True
+
+
 
 # Config for visualization for wrong prediction visualization.
 # _C.TENSORBOARD.ENABLE must be True.
 _C.TENSORBOARD.WRONG_PRED_VIS = CfgNode()
+_C.TENSORBOARD.WRONG_PRED_VIS.ENABLE = False
 _C.TENSORBOARD.WRONG_PRED_VIS.ENABLE = False
 # Folder tag to origanize model eval videos under.
 _C.TENSORBOARD.WRONG_PRED_VIS.TAG = "Incorrectly classified videos."

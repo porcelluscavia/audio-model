@@ -126,29 +126,32 @@ class TensorboardWriter(object):
         self.writer.add_audio(tag, vid_tensor)
 
     def add_waveplot(self, audio_array, tag="Waveplot Image"):
-        plot_buf = self.make_waveplot(audio_array)
-        # import pdb
-        # pdb.set_trace()
+        """
+        Add amplitude envelope of post-GradCAM audio data to Tensorboard as an image.
+        Mostly as a sanity check that the individual audio files is actually different, even when they sound similar.
+        Args:
+            audio_array (numpy array): reconstructed raw audio values after GradCAM applied to it.
+            tag (Optional[str]): name of the image.
+        """
 
+        plot_buf = self.make_waveplot(audio_array)
         image = PIL.Image.open(plot_buf)
         image = ToTensor()(image)
         # Do I need to add the batch dimension? (if yes, see stackoverflow)
-
         self.add_image(image, tag=tag)
         return
 
-    def make_waveplot(self, tensor):
+    def make_waveplot(self, audio_array):
         """
         Render the amplitude envelope of a waveform.
         Args:
-            tensor (tensor):
+            audio_array (numpy array): reconstructed raw audio values after GradCAM applied to it
         Returns:
-            waveplot (tensor): a 3D tensor. Result of applying heatmap to the 2D tensor.
+            buf (IO buffer): the saved matplotlib figure.
         """
-        #tensor = tensor.cpu().detach().numpy()
 
         fig, ax = plt.subplots(nrows=1, sharex=True, sharey=True)
-        librosa.display.waveplot(tensor)
+        librosa.display.waveplot(audio_array)
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
