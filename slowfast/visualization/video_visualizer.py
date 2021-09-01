@@ -352,8 +352,8 @@ class VideoVisualizer:
         num_classes,
         class_names_path,
         top_k=1,
-        colormap="rainbow",
-        thres=0.7,
+        colormap="flag",
+        thres=0.6,
         lower_thres=0.3,
         common_class_names=None,
         mode="top-k",
@@ -413,7 +413,7 @@ class VideoVisualizer:
         ground_truth=False,
     ):
         """
-        Draw labels and bouding boxes for one image. By default, predicted labels are drawn in
+        Draw labels and bounding boxes for one image. By default, predicted labels are drawn in
         the top left corner of the image or corresponding bounding boxes. For ground truth labels
         (setting True for ground_truth flag), labels will be drawn in the bottom left corner.
         Args:

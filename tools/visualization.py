@@ -29,32 +29,6 @@ import slowfast.datasets.audio_loader_vggsound as audio_vgg
 
 logger = logging.get_logger(__name__)
 
-# model.eval()
-#
-# test_meter.iter_tic()
-#
-# for cur_iter, (inputs, labels, audio_idx, meta) in enumerate(test_loader):
-#     if cfg.NUM_GPUS:
-#         # Transfer the data to the current GPU device.
-#         if isinstance(inputs, (list,)):
-#             for i in range(len(inputs)):
-#                 inputs[i] = inputs[i].cuda(non_blocking=True)
-#         else:
-#             inputs = inputs.cuda(non_blocking=True)
-#
-#         # Transfer the data to the current GPU device.
-#         if isinstance(labels, (dict,)):
-#             labels = {k: v.cuda() for k, v in labels.items()}
-#         else:
-#             labels = labels.cuda()
-#         audio_idx = audio_idx.cuda()
-#     test_meter.data_toc()
-#
-#     # Perform the forward pass.
-#     # Inputs has size 1 x 32 x [64, 32, 32]
-#     preds = model(inputs)
-
-
 
 def run_visualization(vis_loader, model, cfg, writer=None):
     """
@@ -139,13 +113,15 @@ def run_visualization(vis_loader, model, cfg, writer=None):
             )
         else:
             activations, preds = model_vis.get_activations(inputs)
+
+
         if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
             if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL:
                 inputs, preds = gradcam(inputs, labels=labels, binary_mask = True)
             else:
                 #inputs/outputs here are by batch?
                 old_inputs = inputs
-                inputs, preds = gradcam(old_inputs, binary_mask = False)
+                inputs, preds = gradcam(old_inputs, binary_mask = True)
 
                 # import pdb
                 # pdb.set_trace()
@@ -171,17 +147,15 @@ def run_visualization(vis_loader, model, cfg, writer=None):
         if writer is not None:
             total_vids = 0
 
-
-            # Looping through each batch.
             for i in range(max(n_devices, 1)):
                 cur_input = inputs[i]
-                orig_input = old_inputs[i]
+                #orig_input = old_inputs[i]
                 cur_activations = activations[i]
                 cur_batch_size = cur_input[0].shape[0]
                 cur_preds = preds[i]
                 cur_boxes = boxes[i]
-                audio_tensors = []
-                video_tensors = []
+
+                # Looping through each batch.
                 for cur_batch_idx in range(cur_batch_size):
                     global_idx += 1
                     total_vids += 1
@@ -200,8 +174,9 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 video = input_pathway[cur_batch_idx]
                             # import pdb
                             # pdb.set_trace()
-                            # orig_audio = audio_vgg.recover_audio(orig_input[global_idx])
-                            # writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
+                            orig_audio = audio_vgg.recover_audio(video)
+                            writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
+
 
                             if not cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
                                 # Permute to (T, H, W, C) from (C, T, H, W).
@@ -219,23 +194,30 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 cur_preds
                                 if cfg.DETECTION.ENABLE
                                 else cur_preds[cur_batch_idx]
+
                             )
                             video = video_vis.draw_clip(
-                                video, cur_prediction, bboxes=bboxes
+                                video, cur_prediction
+                                #, bboxes=bboxes
                             )
+                            torch.save(video, '/home/stureski/output_tensor_{}'.format(global_idx))
                             video = (
                                 torch.from_numpy(np.array(video))
                                 .permute(0, 3, 1, 2)
                                 .unsqueeze(0)
                                 #adds extra dimension in the beginning
                             )
-                            import pdb
-                            pdb.set_trace()
+
                             # "video" should be a log-mel spectrogram with a GradCAM binary mask applied - resulting in only salient audio
                             recovered_audio = audio_vgg.recover_audio(video)
-                            video_tensors.append(video)
-                            audio_tensors.append(recovered_audio)
+                            # video_tensors.append(video)
+                            # audio_tensors.append(recovered_audio)
+
                             writer.add_audio(recovered_audio, tag="Input {}/Pathway{}".format(global_idx, path_idx + 1))
+                            if cfg.TENSORBOARD.MODEL_VIS.WAVEPLOT.ENABLE:
+                                writer.add_waveplot(recovered_audio, tag="Input {}".format(global_idx))
+
+
                             writer.add_video(
                                 #change this to print the name of the label- if not through the predicition, through a concurrent for loop
                                 video,
@@ -243,7 +225,8 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                     global_idx, path_idx + 1
                                 ),
                             )
-                            writer.add_waveplot(recovered_audio, tag="Input {}/Pathway{}".format(global_idx, path_idx + 1))
+                            if cfg.TENSORBOARD.MODEL_VIS.WAVEPLOT.ENABLE:
+                                writer.add_waveplot(recovered_audio, tag="Input {}".format(global_idx))
 
 
 
@@ -344,7 +327,7 @@ def visualize(cfg):
         # Print config.
         logger.info("Model Visualization with config:")
         logger.info(cfg)
-        torch_log.getLogger('PIL').setLevel(torch_log.WARNING)
+        # torch_log.getLogger('PIL').setLevel(torch_log.WARNING)
 
         # Build the video model and print model statistics.
         model = build_model(cfg)

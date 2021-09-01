@@ -383,7 +383,7 @@ def add_ndim_array(
     nrow=None,
     normalize=False,
     global_step=None,
-    heat_map=True,
+    heat_map=False,
 ):
     """
     Visualize and add tensors of n-dimentionals to a Tensorboard SummaryWriter. Tensors

@@ -252,13 +252,15 @@ _C.DATA.TRAIN_PCA_EIGVEC = [
 _C.DATA.PATH_TO_PRELOAD_IMDB = ""
 
 # The mean value of the video raw pixels across the R G B channels.
-_C.DATA.MEAN = [0.45, 0.45, 0.45]
+# _C.DATA.MEAN = [0.45, 0.45, 0.45]
+_C.DATA.MEAN = [0.5, 0.5, 0.5]
 # List of input frame channel dimensions.
 
 _C.DATA.INPUT_CHANNEL_NUM = [3, 3]
 
 # The std value of the video raw pixels across the R G B channels.
-_C.DATA.STD = [0.225, 0.225, 0.225]
+# _C.DATA.STD = [0.225, 0.225, 0.225]
+_C.DATA.STD = [0.25, 0.25, 0.25]
 
 # The spatial augmentation jitter scales for training.
 _C.DATA.TRAIN_JITTER_SCALES = [256, 320]
@@ -316,7 +318,7 @@ _C.DETECTION = CfgNode()
 _C.DETECTION.ENABLE = False
 
 # Aligned version of RoI. More details can be found at slowfast/models/head_helper.py
-_C.DETECTION.ALIGNED = True
+_C.DETECTION.ALIGNED = False
 
 # Spatial scale factor.
 _C.DETECTION.SPATIAL_SCALE_FACTOR = 16
@@ -333,7 +335,8 @@ _C.DETECTION.ROI_XFORM_RESOLUTION = 7
 _C.AUDIO_DATA = CfgNode()
 
 # Sampling rate of audio (in kHz)
-_C.AUDIO_DATA.SAMPLING_RATE = 24000
+# _C.AUDIO_DATA.SAMPLING_RATE = 24000
+_C.AUDIO_DATA.SAMPLING_RATE = 41000
 
 # Duration of audio clip from which to extract the spectrogram
 _C.AUDIO_DATA.CLIP_SECS = 1.279
@@ -579,9 +582,9 @@ _C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = True
 # _C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['head/pathway0_avgpool', 'head/pathway1_avgpool']
 _C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
 # Top-k predictions to plot on videos
-_C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 1
+_C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 0
 # Colormap to for text boxes and bounding boxes colors
-_C.TENSORBOARD.MODEL_VIS.COLORMAP = "Pastel2"
+_C.TENSORBOARD.MODEL_VIS.COLORMAP = "spring"
 # Config for visualization video inputs with Grad-CAM.
 # _C.TENSORBOARD.ENABLE must be True.
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM = CfgNode()
@@ -595,13 +598,13 @@ _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn',
 # If True, visualize Grad-CAM using true labels for each instances.
 # If False, use the highest predicted class.
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL = False
-# Colormap to for text boxes and bounding boxes colors
+# Colormap to use for text boxes and bounding boxes colors
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.COLORMAP = "viridis"
 
 # Visualize amplitude envelope of raw audio outputted by GradCAM.
 _C.TENSORBOARD.MODEL_VIS.WAVEPLOT = CfgNode()
 # If False, skip making waveplots on Tensorboard.
-_C.TENSORBOARD.MODEL_VIS.WAVEPLOT.ENABLE = True
+_C.TENSORBOARD.MODEL_VIS.WAVEPLOT.ENABLE = False
 
 
 
