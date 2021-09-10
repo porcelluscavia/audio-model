@@ -2,6 +2,8 @@ import random
 import numpy as np
 import torch
 import os
+import tensorflow as tf
+tf.compat.v1.enable_eager_execution()
 
 
 
@@ -36,7 +38,7 @@ def get_start_end_idx(audio_size, clip_size, clip_idx, num_clips):
     return start_idx, end_idx
 
 
-def pack_audio(cfg, audio_record, temporal_sample_index):
+def pack_audio(cfg, audio_record, temporal_sample_index, tensorflow = True):
     path_audio = os.path.join(cfg.VGGSOUND.AUDIO_DATA_DIR, audio_record['video'][:-4] + '.wav')
     import librosa
     samples, sr = librosa.core.load(path_audio, sr=None, mono=False)
@@ -48,7 +50,7 @@ def pack_audio(cfg, audio_record, temporal_sample_index):
         temporal_sample_index,
         cfg.TEST.NUM_ENSEMBLE_VIEWS
     )
-    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx))
+    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), tensorflow=tensorflow)
     return spectrogram
 
 
@@ -79,25 +81,62 @@ def _log_specgram(cfg, audio, window_size=10,
 
     return log_mel_spec.T
 
+def _logmel_tf(cfg, waveform, window_size=10,
+                 step_size=5,):
+    nperseg = int(round(window_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
+    noverlap = int(round(step_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
+    z = tf.contrib.signal.stft(waveform,
+                               frame_length=nperseg,
+                               frame_step=noverlap,
+                               fft_length=2048,
+                               pad_end=True)
+    magnitudes = tf.abs(z)
+    filterbank = tf.contrib.signal.linear_to_mel_weight_matrix(
+        num_mel_bins=128,
+        num_spectrogram_bins=magnitudes.shape[-1].value,
+        sample_rate=cfg.AUDIO_DATA.SAMPLING_RATE,
+        lower_edge_hertz=0.0,
+        upper_edge_hertz=8000.0)
+    melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
+    logmelspec = tf.log1p(melspectrogram)
+    logmelspec_trans = tf.transpose(logmelspec)
+    return logmelspec_trans.numpy()
 
-def _extract_sound_feature(cfg, samples, start_idx, end_idx):
+    # return logmelspec_trans.eval(session=tf.compat.v1.Session())
+
+def _extract_sound_feature(cfg, samples, start_idx, end_idx, tensorflow=True):
+
     if samples.shape[0] < int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)):
+        if tensorflow:
+            spectrogram = _logmel_tf(cfg, samples)
+            num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
+            spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
+            return torch.tensor(spectrogram).unsqueeze(0)
         spectrogram = _log_specgram(cfg, samples,
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                                     )
+
         num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
         spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
     else:
+
+        if tensorflow:
+            samples = samples[start_idx:end_idx]
+            spectrogram = _logmel_tf(cfg, samples)
+            return torch.tensor(spectrogram).unsqueeze(0)
+
         samples = samples[start_idx:end_idx]
+
         spectrogram = _log_specgram(cfg, samples,
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                                     )
+
     return torch.tensor(spectrogram).unsqueeze(0)
 
 
-def recover_audio(audio_tensor, eps=1e-6):
+def recover_audio(cfg, audio_tensor, eps=1e-6):
     """
     Reconstruct an audio file based on a spectrogram that has been numerically manipulated.
     It should come in with shape torch.Size([1, 1, 3, 128, 128].
@@ -112,19 +151,22 @@ def recover_audio(audio_tensor, eps=1e-6):
     from librosa import feature
     #feed the untouched spectrogram in instead? but gradcam makes filters on the mel spectrogram
 
-    #this audio is a spectrogram with mel filter applied to it
+    # This audio is a spectrogram with mel filter applied to it.
     audio_tensor = torch.squeeze(audio_tensor)
-    #is it the right shape now?
+
+    audio_tensor = audio_tensor.T
+
     log_mel_array = audio_tensor.cpu().detach().numpy()
     # import pdb
     # pdb.set_trace()
-    #All 3 arrays returned are identical
+    # All 3 arrays returned are identical.
     mel_array = np.exp(log_mel_array) - eps
-    recovered_audio = feature.inverse.mel_to_audio(mel_array[0])
+    # copy the parameters from forward step. Else, look up how to do inversion for steps separately.
+    recovered_audio = feature.inverse.mel_to_audio(mel_array[0], sr= cfg.AUDIO_DATA.SAMPLING_RATE)
 
 
-    #TODO later: make sure the incoming audio is just thresholded masked, not everything in full
-    #TODO later later: improve the audio by lossless format? or NN's?
+
+    #TODO later later: improve the audio with NN's?
     return recovered_audio
 
 

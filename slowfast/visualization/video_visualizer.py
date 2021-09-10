@@ -410,7 +410,7 @@ class VideoVisualizer:
         bboxes=None,
         alpha=0.5,
         text_alpha=0.7,
-        ground_truth=False,
+        ground_truth=True,
     ):
         """
         Draw labels and bounding boxes for one image. By default, predicted labels are drawn in

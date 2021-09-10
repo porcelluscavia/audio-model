@@ -68,7 +68,7 @@ class GradCAM:
         for layer_name in self.target_layers:
             self._register_single_hook(layer_name=layer_name)
 
-    def _calculate_localization_map(self, inputs, labels=None, binary_mask = False, add_std=True, num_std = 1):
+    def _calculate_localization_map(self, inputs, labels=None, binary_mask = False, add_std=False, num_std = 1):
         """
         Calculate localization map for all inputs with Grad-CAM.
         Args:
@@ -191,7 +191,7 @@ class GradCAM:
 
 
 
-    def __call__(self, inputs, labels=None, alpha=0.5, binary_mask = False, check_heatmap = False):
+    def __call__(self, inputs, labels=None, alpha=0.5, binary_mask = False, check_heatmap = True):
         """
         Visualize the localization maps on their corresponding inputs as heatmap,
         using Grad-CAM.
@@ -209,6 +209,8 @@ class GradCAM:
         # import pdb
         # pdb.set_trace()
         for i, localization_map in enumerate(localization_maps):
+            # import pdb
+            # pdb.set_trace()
             # Convert (B, 1, T, H, W) to (B, T, H, W)
             localization_map = localization_map.squeeze(dim=1)
             if localization_map.device != torch.device("cpu"):
@@ -234,6 +236,7 @@ class GradCAM:
                 continue
 
             # Before this operation, curr_inp is completely in grayscale.
+            # Matplotlib heatmap on an image
             
             curr_inp = alpha * heatmap + (1 - alpha) * curr_inp
             # # # Permute inp to (B, T, C, H, W)

@@ -149,7 +149,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
 
             for i in range(max(n_devices, 1)):
                 cur_input = inputs[i]
-                #orig_input = old_inputs[i]
+                orig_input = old_inputs[i]
                 cur_activations = activations[i]
                 cur_batch_size = cur_input[0].shape[0]
                 cur_preds = preds[i]
@@ -172,14 +172,17 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 ]
                             else:
                                 video = input_pathway[cur_batch_idx]
-                            # import pdb
-                            # pdb.set_trace()
-                            orig_audio = audio_vgg.recover_audio(video)
+
+
+
+                            orig_audio = audio_vgg.recover_audio(cfg, video)
                             writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
 
 
                             if not cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
                                 # Permute to (T, H, W, C) from (C, T, H, W).
+
+
                                 video = video.permute(1, 2, 3, 0)
                                 video = data_utils.revert_tensor_normalize(
                                     video, cfg.DATA.MEAN, cfg.DATA.STD
@@ -187,6 +190,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             else:
                                 # Permute from (T, C, H, W) to (T, H, W, C)
                                 video = video.permute(0, 2, 3, 1)
+
                             bboxes = (
                                 None if cur_boxes is None else cur_boxes[:, 1:]
                             )
@@ -198,7 +202,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             )
                             video = video_vis.draw_clip(
                                 video, cur_prediction
-                                #, bboxes=bboxes
+                                , bboxes=bboxes
                             )
                             torch.save(video, '/home/stureski/output_tensor_{}'.format(global_idx))
                             video = (
@@ -208,8 +212,10 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 #adds extra dimension in the beginning
                             )
 
+                            # import pdb
+                            # pdb.set_trace()
                             # "video" should be a log-mel spectrogram with a GradCAM binary mask applied - resulting in only salient audio
-                            recovered_audio = audio_vgg.recover_audio(video)
+                            recovered_audio = audio_vgg.recover_audio(cfg, video)
                             # video_tensors.append(video)
                             # audio_tensors.append(recovered_audio)
 

@@ -335,8 +335,8 @@ _C.DETECTION.ROI_XFORM_RESOLUTION = 7
 _C.AUDIO_DATA = CfgNode()
 
 # Sampling rate of audio (in kHz)
-# _C.AUDIO_DATA.SAMPLING_RATE = 24000
-_C.AUDIO_DATA.SAMPLING_RATE = 41000
+_C.AUDIO_DATA.SAMPLING_RATE = 24000
+# _C.AUDIO_DATA.SAMPLING_RATE = 41000
 
 # Duration of audio clip from which to extract the spectrogram
 _C.AUDIO_DATA.CLIP_SECS = 1.279
@@ -582,7 +582,7 @@ _C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = True
 # _C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['head/pathway0_avgpool', 'head/pathway1_avgpool']
 _C.TENSORBOARD.MODEL_VIS.LAYER_LIST = ['s5/pathway1_res2/branch2/c_bn', 's5/pathway0_res2/branch2/c_bn']
 # Top-k predictions to plot on videos
-_C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 0
+_C.TENSORBOARD.MODEL_VIS.TOPK_PREDS = 1
 # Colormap to for text boxes and bounding boxes colors
 _C.TENSORBOARD.MODEL_VIS.COLORMAP = "spring"
 # Config for visualization video inputs with Grad-CAM.
