@@ -38,7 +38,7 @@ def get_start_end_idx(audio_size, clip_size, clip_idx, num_clips):
     return start_idx, end_idx
 
 
-def pack_audio(cfg, audio_record, temporal_sample_index, tensorflow = True):
+def pack_audio(cfg, audio_record, temporal_sample_index, torch = True):
     path_audio = os.path.join(cfg.VGGSOUND.AUDIO_DATA_DIR, audio_record['video'][:-4] + '.wav')
     import librosa
     samples, sr = librosa.core.load(path_audio, sr=None, mono=False)
@@ -50,7 +50,7 @@ def pack_audio(cfg, audio_record, temporal_sample_index, tensorflow = True):
         temporal_sample_index,
         cfg.TEST.NUM_ENSEMBLE_VIEWS
     )
-    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), tensorflow=tensorflow)
+    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), torch=torch)
     return spectrogram
 
 
@@ -81,38 +81,41 @@ def _log_specgram(cfg, audio, window_size=10,
 
     return log_mel_spec.T
 
-def _logmel_tf(cfg, waveform, window_size=10,
+def _log_specgram_torch(cfg, waveform, window_size=10,
                  step_size=5,):
+    audio = torch.from_numpy(waveform)
+    # audio = audio.cuda()
     nperseg = int(round(window_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
     noverlap = int(round(step_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
-    z = tf.contrib.signal.stft(waveform,
-                               frame_length=nperseg,
-                               frame_step=noverlap,
-                               fft_length=2048,
-                               pad_end=True)
-    magnitudes = tf.abs(z)
-    filterbank = tf.contrib.signal.linear_to_mel_weight_matrix(
-        num_mel_bins=128,
-        num_spectrogram_bins=magnitudes.shape[-1].value,
-        sample_rate=cfg.AUDIO_DATA.SAMPLING_RATE,
-        lower_edge_hertz=0.0,
-        upper_edge_hertz=8000.0)
-    melspectrogram = tf.tensordot(magnitudes, filterbank, 1)
-    logmelspec = tf.log1p(melspectrogram)
-    logmelspec_trans = tf.transpose(logmelspec)
-    return logmelspec_trans.numpy()
+    window = torch.hann_window(nperseg)
+    from librosa import stft, filters
+    filter_banks = filters.mel(sr=cfg.AUDIO_DATA.SAMPLING_RATE,
+                            n_fft=2048,
+                            n_mels=128,
+                            htk=True,
+                            norm=None)
+    #filter_banks = torch.from_numpy(filter_banks).cuda()
+    filter_banks = torch.from_numpy(filter_banks)
+    S = torch.stft(audio, 2048,
+                hop_length=noverlap,
+                win_length=nperseg, window=window,
+                pad_mode='constant').pow(2).sum(2).sqrt()
+    mel_S = filter_banks @ S
+    log_mel_S = torch.log1p(mel_S)
+    log_mel_S_T = torch.transpose(log_mel_S, 0, 1)
+    #np_log_mel_S = log_mel_S_T.cpu().detach().numpy()
+    return log_mel_S_T
 
-    # return logmelspec_trans.eval(session=tf.compat.v1.Session())
-
-def _extract_sound_feature(cfg, samples, start_idx, end_idx, tensorflow=True):
+def _extract_sound_feature(cfg, samples, start_idx, end_idx, torch=True):
 
     if samples.shape[0] < int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)):
-        if tensorflow:
-            spectrogram = _logmel_tf(cfg, samples)
-            num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
-            spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
-            return torch.tensor(spectrogram).unsqueeze(0)
-        spectrogram = _log_specgram(cfg, samples,
+        if torch:
+            spectrogram = _log_specgram_torch(cfg, samples,
+                                        window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
+                                        step_size=cfg.AUDIO_DATA.HOP_LENGTH
+                                        )
+        else:
+            spectrogram = _log_specgram(cfg, samples,
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                                     )
@@ -120,20 +123,23 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx, tensorflow=True):
         num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
         spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
     else:
-
-        if tensorflow:
-            samples = samples[start_idx:end_idx]
-            spectrogram = _logmel_tf(cfg, samples)
-            return torch.tensor(spectrogram).unsqueeze(0)
-
         samples = samples[start_idx:end_idx]
+        print("hi")
+        if torch:
+            spectrogram = _log_specgram_torch(cfg, samples,
+                                        window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
+                                        step_size=cfg.AUDIO_DATA.HOP_LENGTH
+                                        )
 
-        spectrogram = _log_specgram(cfg, samples,
+
+
+        else:
+            spectrogram = _log_specgram(cfg, samples,
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                                     )
-
-    return torch.tensor(spectrogram).unsqueeze(0)
+    return spectrogram.unsqueeze(0)
+    #return torch.tensor(spectrogram).unsqueeze(0)
 
 
 def recover_audio(cfg, audio_tensor, eps=1e-6):

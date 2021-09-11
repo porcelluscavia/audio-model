@@ -173,7 +173,13 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             else:
                                 video = input_pathway[cur_batch_idx]
 
+                            #~Audio Recovery~
+                            #get the original audio file name
+                            #feed that through to here
+                            # y = y.cuda()
+                            #mag = trsfn(y)
 
+                            #yhat = L_BFGS(mag, trsfn, len(y))
 
                             orig_audio = audio_vgg.recover_audio(cfg, video)
                             writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
