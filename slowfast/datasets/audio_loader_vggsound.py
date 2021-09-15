@@ -2,8 +2,8 @@ import random
 import numpy as np
 import torch
 import os
-import tensorflow as tf
-tf.compat.v1.enable_eager_execution()
+# import tensorflow as tf
+# tf.compat.v1.enable_eager_execution()
 
 
 
@@ -38,7 +38,7 @@ def get_start_end_idx(audio_size, clip_size, clip_idx, num_clips):
     return start_idx, end_idx
 
 
-def pack_audio(cfg, audio_record, temporal_sample_index, torch = True):
+def pack_audio(cfg, audio_record, temporal_sample_index, torch = False):
     path_audio = os.path.join(cfg.VGGSOUND.AUDIO_DATA_DIR, audio_record['video'][:-4] + '.wav')
     import librosa
     samples, sr = librosa.core.load(path_audio, sr=None, mono=False)
@@ -50,7 +50,8 @@ def pack_audio(cfg, audio_record, temporal_sample_index, torch = True):
         temporal_sample_index,
         cfg.TEST.NUM_ENSEMBLE_VIEWS
     )
-    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), torch=torch)
+    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), has_torch=torch)
+    print(spectrogram.shape)
     return spectrogram
 
 
@@ -66,6 +67,7 @@ def _log_specgram(cfg, audio, window_size=10,
                 hop_length=noverlap,
                 win_length=nperseg,
                 pad_mode='constant')
+    print(spec.shape)
 
     #what is the dimension of spec?
 
@@ -78,16 +80,18 @@ def _log_specgram(cfg, audio, window_size=10,
 
     # log-mel-spec
     log_mel_spec = np.log(mel_spec + eps)
-
+    print(log_mel_spec.T.shape)
     return log_mel_spec.T
 
 def _log_specgram_torch(cfg, waveform, window_size=10,
                  step_size=5,):
     audio = torch.from_numpy(waveform)
     # audio = audio.cuda()
-    nperseg = int(round(window_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
-    noverlap = int(round(step_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
-    window = torch.hann_window(nperseg)
+    windowsize = 2048
+    print(windowsize)
+    # nperseg = int(round(window_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
+    # noverlap = int(round(step_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
+    window = torch.hann_window(windowsize)
     from librosa import stft, filters
     filter_banks = filters.mel(sr=cfg.AUDIO_DATA.SAMPLING_RATE,
                             n_fft=2048,
@@ -96,20 +100,22 @@ def _log_specgram_torch(cfg, waveform, window_size=10,
                             norm=None)
     #filter_banks = torch.from_numpy(filter_banks).cuda()
     filter_banks = torch.from_numpy(filter_banks)
-    S = torch.stft(audio, 2048,
-                hop_length=noverlap,
-                win_length=nperseg, window=window,
-                pad_mode='constant').pow(2).sum(2).sqrt()
+    # S = torch.stft(audio, 2048,
+    #             hop_length=noverlap,
+    #             win_length=nperseg, window=window,
+    #             pad_mode='constant').pow(2).sum(2).sqrt()
+    S = torch.stft(audio, windowsize, window=window).pow(2).sum(2).sqrt()
     mel_S = filter_banks @ S
     log_mel_S = torch.log1p(mel_S)
     log_mel_S_T = torch.transpose(log_mel_S, 0, 1)
+    #print(log_mel_S_T.shape)
     #np_log_mel_S = log_mel_S_T.cpu().detach().numpy()
     return log_mel_S_T
 
-def _extract_sound_feature(cfg, samples, start_idx, end_idx, torch=True):
+def _extract_sound_feature(cfg, samples, start_idx, end_idx, has_torch=True):
 
     if samples.shape[0] < int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)):
-        if torch:
+        if has_torch:
             spectrogram = _log_specgram_torch(cfg, samples,
                                         window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                         step_size=cfg.AUDIO_DATA.HOP_LENGTH
@@ -124,8 +130,7 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx, torch=True):
         spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
     else:
         samples = samples[start_idx:end_idx]
-        print("hi")
-        if torch:
+        if has_torch:
             spectrogram = _log_specgram_torch(cfg, samples,
                                         window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                         step_size=cfg.AUDIO_DATA.HOP_LENGTH
@@ -137,9 +142,10 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx, torch=True):
             spectrogram = _log_specgram(cfg, samples,
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
-                                    )
-    return spectrogram.unsqueeze(0)
-    #return torch.tensor(spectrogram).unsqueeze(0)
+                           )
+            spectrogram = torch.tensor(spectrogram)
+
+        return spectrogram.unsqueeze(0)
 
 
 def recover_audio(cfg, audio_tensor, eps=1e-6):

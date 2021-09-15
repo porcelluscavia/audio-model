@@ -98,6 +98,8 @@ class GradCAM:
         score = torch.sum(score)
         score.backward()
         localization_maps = []
+        inputs_shape = list(inputs[0].shape)
+        num_inputs = inputs_shape[0]
         for i, inp in enumerate(inputs):
             # import pdb
             # pdb.set_trace()
@@ -154,15 +156,15 @@ class GradCAM:
                 flat_map = torch.flatten(localization_map, 1, 4)
                 #10 average values for 10 inputs
                 mean_per_input = torch.mean(flat_map, 1)
-                mean_per_input = mean_per_input.reshape(10, 1)
-                mean_per_input = mean_per_input.expand(10, flat_map.shape[1])
+                mean_per_input = mean_per_input.reshape(num_inputs, 1)
+                mean_per_input = mean_per_input.expand(num_inputs, flat_map.shape[1])
 
 
 
                 if add_std:
                     std_per_input = torch.std(flat_map, 1)
-                    std_per_input = std_per_input.reshape(10, 1)
-                    std_per_input = std_per_input.expand(10, flat_map.shape[1])
+                    std_per_input = std_per_input.reshape(num_inputs, 1)
+                    std_per_input = std_per_input.expand(num_inputs, flat_map.shape[1])
                     std_per_input = torch.mul(std_per_input, num_std)
                     mean_plus_one_std = torch.add(mean_per_input, std_per_input)
                     mask = torch.gt(flat_map, mean_plus_one_std).int()
@@ -191,7 +193,7 @@ class GradCAM:
 
 
 
-    def __call__(self, inputs, labels=None, alpha=0.5, binary_mask = False, check_heatmap = True):
+    def get_heatmapped_specgm(self, inputs, labels=None, alpha=0.5, binary_mask = False):
         """
         Visualize the localization maps on their corresponding inputs as heatmap,
         using Grad-CAM.
@@ -208,6 +210,66 @@ class GradCAM:
             inputs, labels=labels, binary_mask=binary_mask)
         # import pdb
         # pdb.set_trace()
+        for i, localization_map in enumerate(localization_maps):
+
+            # Convert (B, 1, T, H, W) to (B, T, H, W)
+            #localization_map = localization_map.squeeze(dim=1)
+            if localization_map.device != torch.device("cpu"):
+                localization_map = localization_map.cpu()
+
+            # Turn the individual values into 3-value RGB pixel values.
+            heatmap = self.colormap(localization_map)
+            heatmap = heatmap[:, :, :, :, :3]
+            # Permute input from (B, C, T, H, W) to (B, T, H, W, C)
+            inp = inputs[i][:, :, None, :, :]
+            curr_inp = inp.permute(0, 2, 3, 4, 1)
+
+            if curr_inp.device != torch.device("cpu"):
+                curr_inp = curr_inp.cpu()
+            curr_inp = data_utils.revert_tensor_normalize(
+                curr_inp, self.data_mean, self.data_std
+            )
+            curr_inp = curr_inp.squeeze(4)
+
+            # heatmap = torch.from_numpy(heatmap)
+            #
+            # if check_heatmap:
+            #     heatmap = heatmap.permute(0, 1, 4, 2, 3)
+            #     result_ls.append(heatmap)
+            #     continue
+            #
+            # # Before this operation, curr_inp is completely in grayscale.
+            # # Matplotlib heatmap on an image
+            #
+
+
+            curr_inp = localization_map * curr_inp
+            # # # # Permute inp to (B, T, C, H, W)
+            # curr_inp = curr_inp.permute(0, 1, 4, 2, 3)
+            #
+            #
+            #
+            result_ls.append(curr_inp)
+
+
+        return result_ls, preds
+
+    def __call__(self, inputs, labels=None, alpha=0.5, binary_mask=False, check_heatmap=True):
+        """
+        Visualize the localization maps on their corresponding inputs as heatmap,
+        using Grad-CAM.
+        Args:
+            inputs (list of tensor(s)): the input clips.
+            labels (Optional[tensor]): labels of the current input clips.
+            alpha (float): transparency level of the heatmap, in the range [0, 1].
+        Returns:
+            result_ls (list of tensor(s)): the visualized inputs.
+            preds (tensor): shape (n_instances, n_class). Model predictions for `inputs`.
+        """
+        result_ls = []
+        localization_maps, preds = self._calculate_localization_map(
+            inputs, labels=labels, binary_mask=binary_mask)
+
         for i, localization_map in enumerate(localization_maps):
             # import pdb
             # pdb.set_trace()
@@ -227,9 +289,12 @@ class GradCAM:
             curr_inp = data_utils.revert_tensor_normalize(
                 curr_inp, self.data_mean, self.data_std
             )
+            import pdb
+            pdb.set_trace()
 
             heatmap = torch.from_numpy(heatmap)
 
+            # Just a debugging tool
             if check_heatmap:
                 heatmap = heatmap.permute(0, 1, 4, 2, 3)
                 result_ls.append(heatmap)
@@ -237,14 +302,11 @@ class GradCAM:
 
             # Before this operation, curr_inp is completely in grayscale.
             # Matplotlib heatmap on an image
-            
+
             curr_inp = alpha * heatmap + (1 - alpha) * curr_inp
             # # # Permute inp to (B, T, C, H, W)
             curr_inp = curr_inp.permute(0, 1, 4, 2, 3)
 
-
-
             result_ls.append(curr_inp)
-
 
         return result_ls, preds

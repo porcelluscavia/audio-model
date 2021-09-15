@@ -2,10 +2,14 @@
 
 from .metrics import *
 import torch
+import random
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.lbfgs import LBFGS
 from tqdm import tqdm
+import os
+import numpy as np
+import pandas as pd
 
 from typing import Tuple
 import math
@@ -17,6 +21,7 @@ _func_mapper = {
     'SNR': snr,
     'SER': ser
 }
+SAMPLING_RATE = 24000
 
 def L_BFGS(spec, transform_fn, samples=None, init_x0=None, max_iter=1000, tol=1e-6, verbose=1, eva_iter=10, metric='sc',
            **kwargs):
@@ -45,7 +50,12 @@ def L_BFGS(spec, transform_fn, samples=None, init_x0=None, max_iter=1000, tol=1e
 
     Returns:
         A 1d tensor converted from the given presentation
+
+
+        **
     """
+
+    #TODO: fix sample size!
     running_loss = 0.0
     if init_x0 is None:
         init_x0 = spec.new_empty(*[samples]).normal_(std=1e-6)
@@ -131,29 +141,24 @@ def _training_loop_bfg(
                 previous_loss = loss
 
 
-y = torch.from_numpy(waveform)
-windowsize = 2048
-window = torch.hann_window(windowsize)
-
-filter_banks = torch.from_numpy(filters.mel(SAMPLING_RATE, windowsize)).cuda()
-window = window.cuda()
 
 
-def trsfn(x):
-
+def trsfn(audio):
+    window_size = 10
+    step_size = 5
     audio = audio.cuda()
-    window = window.cuda()
-    nperseg = int(round(window_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
-    noverlap = int(round(step_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
+
+    nperseg = int(round(window_size * SAMPLING_RATE / 1e3))
+    noverlap = int(round(step_size * SAMPLING_RATE / 1e3))
     window = torch.hann_window(nperseg)
+    window = window.cuda()
     from librosa import stft, filters
-    filter_banks = filters.mel(sr=cfg.AUDIO_DATA.SAMPLING_RATE,
+    filter_banks = filters.mel(sr=SAMPLING_RATE,
                             n_fft=2048,
                             n_mels=128,
                             htk=True,
                             norm=None)
     filter_banks = torch.from_numpy(filter_banks).cuda()
-    filter_banks = torch.from_numpy(filter_banks)
     S = torch.stft(audio, 2048,
                 hop_length=noverlap,
                 win_length=nperseg, window=window,
@@ -166,11 +171,24 @@ def trsfn(x):
 
 
 
-def iteratively_recover_audio(cfg, file_name, temporal_sample_index):
-    waveform = pack_audio(cfg, file_name, temporal_sample_index)
+# def iteratively_recover_audio(cfg, file_name, temporal_sample_index):
+def iteratively_recover_audio(mag, waveform):
+    r"""
+
+
+        Args:
+            mag (Tensor): the input spectrogram. Must be of the shape of a single type of spectrogram?
+
+
+        Returns:
+            A 1d tensor converted from the given presentation
+        """
+    #we start out with a spectrogram already
+
+    # waveform = load_audio(cfg, file_name, temporal_sample_index)
     waveform_tensor = torch.from_numpy(waveform)
-    #y = torch.from_numpy(waveform_tensor)
-    mag = trsfn(waveform_tensor)
+    # #y = torch.from_numpy(waveform_tensor)
+    # mag = trsfn(waveform_tensor)
 
     yhat = L_BFGS(mag, trsfn, len(waveform_tensor))
     yhat_cpu = yhat.cpu()
@@ -213,18 +231,26 @@ def get_start_end_idx(audio_size, clip_size, clip_idx, num_clips):
     return start_idx, end_idx
 
 
-def pack_audio(cfg, audio_record, temporal_sample_index, torch = True):
-    path_audio = os.path.join(cfg.VGGSOUND.AUDIO_DATA_DIR, audio_record['video'][:-4] + '.wav')
+
+
+def load_audio(cfg, curr_idx, temporal_sample_index):
+    #get name of audio file
     import librosa
-    samples, sr = librosa.core.load(path_audio, sr=None, mono=False)
+    path_annotations_pickle = os.path.join(cfg.VGGSOUND.ANNOTATIONS_DIR, cfg.VGGSOUND.TEST_LIST)
+    df = pd.read_pickle(path_annotations_pickle)
+    audio_file = df.at[curr_idx,'video']
+    audio_file_path = os.path.join(cfg.VGGSOUND.AUDIO_DATA_DIR, audio_file[:-4] + '.wav')
+    samples, sr = librosa.core.load(audio_file_path, sr=None, mono=False)
     assert sr == cfg.AUDIO_DATA.SAMPLING_RATE, \
         "Audio sampling rate ({}) does not match target sampling rate ({})".format(sr, cfg.AUDIO_DATA.SAMPLING_RATE)
+    # temporal_sample_index should either be 1 or 0
     start_idx, end_idx = get_start_end_idx(
         samples.shape[0],
-        int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)),
+        int(round(sr * cfg.AUDIO_DATA.CLIP_SECS)),
+        # int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)),
         temporal_sample_index,
         cfg.TEST.NUM_ENSEMBLE_VIEWS
     )
-    clipped_audio = samples[start_idx:end_idx]
-    return clipped_audio
 
+    clipped_audio = samples[int(start_idx):int(end_idx)]
+    return clipped_audio

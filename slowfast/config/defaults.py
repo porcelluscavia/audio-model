@@ -253,14 +253,16 @@ _C.DATA.PATH_TO_PRELOAD_IMDB = ""
 
 # The mean value of the video raw pixels across the R G B channels.
 # _C.DATA.MEAN = [0.45, 0.45, 0.45]
-_C.DATA.MEAN = [0.5, 0.5, 0.5]
+#_C.DATA.MEAN = [0.5, 0.5, 0.5]
+_C.DATA.MEAN = [0.5]
 # List of input frame channel dimensions.
 
 _C.DATA.INPUT_CHANNEL_NUM = [3, 3]
 
 # The std value of the video raw pixels across the R G B channels.
 # _C.DATA.STD = [0.225, 0.225, 0.225]
-_C.DATA.STD = [0.25, 0.25, 0.25]
+#_C.DATA.STD = [0.25, 0.25, 0.25]
+_C.DATA.STD = [0.25]
 
 # The spatial augmentation jitter scales for training.
 _C.DATA.TRAIN_JITTER_SCALES = [256, 320]

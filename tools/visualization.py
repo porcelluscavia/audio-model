@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import torch
 import tqdm
+import math
 from iopath.common.file_io import g_pathmgr
 import logging as torch_log
 
@@ -26,6 +27,7 @@ from slowfast.visualization.utils import (
 )
 from slowfast.visualization.video_visualizer import VideoVisualizer
 import slowfast.datasets.audio_loader_vggsound as audio_vgg
+import audio_recovery.methods as recovery
 
 logger = logging.get_logger(__name__)
 
@@ -116,12 +118,16 @@ def run_visualization(vis_loader, model, cfg, writer=None):
 
 
         if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
+            #CHANGE BACK FORREAL GRADCAM
             if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL:
-                inputs, preds = gradcam(inputs, labels=labels, binary_mask = True)
+                inputs, preds = gradcam.get_heatmapped_specgm(old_inputs, binary_mask=True)
+                #inputs, preds = gradcam(inputs, labels=labels, binary_mask = True)
             else:
                 #inputs/outputs here are by batch?
                 old_inputs = inputs
-                inputs, preds = gradcam(old_inputs, binary_mask = True)
+
+                inputs, preds = gradcam.get_heatmapped_specgm(old_inputs, binary_mask=True)
+                #inputs, preds = gradcam(old_inputs, binary_mask = True)
 
                 # import pdb
                 # pdb.set_trace()
@@ -181,7 +187,15 @@ def run_visualization(vis_loader, model, cfg, writer=None):
 
                             #yhat = L_BFGS(mag, trsfn, len(y))
 
-                            orig_audio = audio_vgg.recover_audio(cfg, video)
+                            #even indices begin the audio file
+                            which_half = global_idx % 2
+                            #at the current audio settings, each audio file is split into two
+                            audio_file_nr = math.floor(global_idx/2)
+                            # if idx_mod_two == 0:
+
+                            orig_audio = recovery.load_audio(cfg, audio_file_nr, which_half)
+
+                            # orig_audio = audio_vgg.recover_audio(cfg, video)
                             writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
 
 
@@ -220,8 +234,9 @@ def run_visualization(vis_loader, model, cfg, writer=None):
 
                             # import pdb
                             # pdb.set_trace()
+                            recovered_audio = recovery.iteratively_recover_audio(video, orig_audio)
                             # "video" should be a log-mel spectrogram with a GradCAM binary mask applied - resulting in only salient audio
-                            recovered_audio = audio_vgg.recover_audio(cfg, video)
+                            #recovered_audio = audio_vgg.recover_audio(cfg, video)
                             # video_tensors.append(video)
                             # audio_tensors.append(recovered_audio)
 
