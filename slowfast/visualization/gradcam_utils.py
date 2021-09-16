@@ -195,8 +195,7 @@ class GradCAM:
 
     def get_heatmapped_specgm(self, inputs, labels=None, alpha=0.5, binary_mask = False):
         """
-        Visualize the localization maps on their corresponding inputs as heatmap,
-        using Grad-CAM.
+        Extract a spectrogram onto which a mask has been applied, thus revealing a map of where the model attended to in the audio.
         Args:
             inputs (list of tensor(s)): the input clips.
             labels (Optional[tensor]): labels of the current input clips.
