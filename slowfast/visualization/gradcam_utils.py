@@ -153,6 +153,7 @@ class GradCAM:
             # Get mean value for each image and restrict only values higher than the mean.
             if binary_mask:
                 #flatten each instance before getting average. Here: 10 inputs of size 16384
+                # Add INPUT SIZE as variable; don't hard code
                 flat_map = torch.flatten(localization_map, 1, 4)
                 #10 average values for 10 inputs
                 mean_per_input = torch.mean(flat_map, 1)
@@ -186,6 +187,8 @@ class GradCAM:
             else:
                 localization_map = localization_map.data
                 localization_maps.append(localization_map)
+            # import pdb
+            # pdb.set_trace()
             # localization_maps.append(localization_map)
 
         return localization_maps, preds
@@ -196,6 +199,7 @@ class GradCAM:
     def get_heatmapped_specgm(self, inputs, labels=None, alpha=0.5, binary_mask = False):
         """
         Extract a spectrogram onto which a mask has been applied, thus revealing a map of where the model attended to in the audio.
+        This is for the audio recovery.
         Args:
             inputs (list of tensor(s)): the input clips.
             labels (Optional[tensor]): labels of the current input clips.
@@ -253,7 +257,7 @@ class GradCAM:
 
         return result_ls, preds
 
-    def __call__(self, inputs, labels=None, alpha=0.5, binary_mask=False, check_heatmap=True):
+    def __call__(self, inputs, labels=None, alpha=0.5, binary_mask=False, check_heatmap=False):
         """
         Visualize the localization maps on their corresponding inputs as heatmap,
         using Grad-CAM.
@@ -288,12 +292,9 @@ class GradCAM:
             curr_inp = data_utils.revert_tensor_normalize(
                 curr_inp, self.data_mean, self.data_std
             )
-            import pdb
-            pdb.set_trace()
-
             heatmap = torch.from_numpy(heatmap)
 
-            # Just a debugging tool
+            # Just a debugging tool.
             if check_heatmap:
                 heatmap = heatmap.permute(0, 1, 4, 2, 3)
                 result_ls.append(heatmap)
@@ -301,6 +302,8 @@ class GradCAM:
 
             # Before this operation, curr_inp is completely in grayscale.
             # Matplotlib heatmap on an image
+
+            #curr_inp = heatmap + curr_inp
 
             curr_inp = alpha * heatmap + (1 - alpha) * curr_inp
             # # # Permute inp to (B, T, C, H, W)

@@ -401,7 +401,8 @@ class VideoVisualizer:
         """
         # import pdb
         # pdb.set_trace()
-        return self.color_map(class_id / self.num_classes)[:3]
+        #return self.color_map(class_id / self.num_classes)[:3]
+        return self.color_map(class_id / self.num_classes[0])[:3]
 
     def draw_one_frame(
         self,
@@ -434,6 +435,8 @@ class VideoVisualizer:
         if isinstance(preds, torch.Tensor):
             if preds.ndim == 1:
                 preds = preds.unsqueeze(0)
+            # import pdb
+            # pdb.set_trace()
             n_instances = preds.shape[0]
         elif isinstance(preds, list):
             n_instances = len(preds)

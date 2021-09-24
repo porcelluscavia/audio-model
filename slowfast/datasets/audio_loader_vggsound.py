@@ -7,12 +7,12 @@ import os
 
 
 
-import random
-import numpy as np
-import torch
-import os
-
-
+# import random
+# import numpy as np
+# import torch
+# import os
+#
+#
 # def get_start_end_idx(audio_size, clip_size, clip_idx, num_clips):
 #     """
 #     Sample a clip of size clip_size from an audio of size audio_size and
@@ -83,7 +83,7 @@ import os
 #     log_mel_spec = np.log(mel_spec + eps)
 #     return log_mel_spec.T
 #
-#
+# #
 # def _extract_sound_feature(cfg, samples, start_idx, end_idx):
 #     if samples.shape[0] < int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)):
 #         spectrogram = _log_specgram(cfg, samples,
@@ -134,7 +134,7 @@ def get_start_end_idx(audio_size, clip_size, clip_idx, num_clips):
     return start_idx, end_idx
 
 
-def pack_audio(cfg, audio_record, temporal_sample_index, torch = False):
+def pack_audio(cfg, audio_record, temporal_sample_index):
     path_audio = os.path.join(cfg.VGGSOUND.AUDIO_DATA_DIR, audio_record['video'][:-4] + '.wav')
     import librosa
     samples, sr = librosa.core.load(path_audio, sr=None, mono=False)
@@ -146,8 +146,9 @@ def pack_audio(cfg, audio_record, temporal_sample_index, torch = False):
         temporal_sample_index,
         cfg.TEST.NUM_ENSEMBLE_VIEWS
     )
-    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), has_torch=torch)
-    # print(spectrogram.shape)
+    spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), has_torch=cfg.VGGSOUND.TORCH_STFT_INPUTS)
+    # print(spectrogram)
+    torch.save(spectrogram, '/home/stureski/inspect_tensors/librosa_spec.pt')
     return spectrogram
 
 
@@ -179,23 +180,23 @@ def _log_specgram(cfg, audio, window_size=10,
     # print(log_mel_spec.T.shape)
     return log_mel_spec.T
 
-def _log_specgram_torch(cfg, waveform, window_size=10,
-                 step_size=5,):
+def _log_specgram_torch(cfg, waveform):
     audio = torch.from_numpy(waveform)
-    # audio = audio.cuda()
+    #audio = audio.cuda()
     windowsize = 2048
     # print(windowsize)
     # nperseg = int(round(window_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
     # noverlap = int(round(step_size * cfg.AUDIO_DATA.SAMPLING_RATE / 1e3))
     window = torch.hann_window(windowsize)
+    #window = window.cuda()
     from librosa import stft, filters
     filter_banks = filters.mel(sr=cfg.AUDIO_DATA.SAMPLING_RATE,
                             n_fft=2048,
                             n_mels=128,
                             htk=True,
                             norm=None)
-    #filter_banks = torch.from_numpy(filter_banks).cuda()
     filter_banks = torch.from_numpy(filter_banks)
+    #filter_banks = filter_banks.cuda()
     # S = torch.stft(audio, 2048,
     #             hop_length=noverlap,
     #             win_length=nperseg, window=window,
@@ -204,46 +205,45 @@ def _log_specgram_torch(cfg, waveform, window_size=10,
     mel_S = filter_banks @ S
     log_mel_S = torch.log1p(mel_S)
     log_mel_S_T = torch.transpose(log_mel_S, 0, 1)
-    print(log_mel_S_T.shape)
-    #np_log_mel_S = log_mel_S_T.cpu().detach().numpy()
+    # print(log_mel_S_T.shape)
+    log_mel_S_T = log_mel_S_T.cpu()
     return log_mel_S_T
 
-def _extract_sound_feature(cfg, samples, start_idx, end_idx, has_torch=True):
+def _extract_sound_feature(cfg, samples, start_idx, end_idx, has_torch=False):
 
     if samples.shape[0] < int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)):
-        pass
-        # if has_torch:
-        #     spectrogram = _log_specgram_torch(cfg, samples,
-        #                                 window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
-        #                                 step_size=cfg.AUDIO_DATA.HOP_LENGTH
-        #                                 )
-        # else:
-        #     spectrogram = _log_specgram(cfg, samples,
-        #                             window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
-        #                             step_size=cfg.AUDIO_DATA.HOP_LENGTH
-        #                             )
-        #
-        # num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
-        # spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
-        # spectrogram = torch.tensor(spectrogram)
+        if has_torch:
+            spectrogram = _log_specgram_torch(cfg, samples)
+        else:
+            spectrogram = _log_specgram(cfg, samples,
+                                    window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
+                                    step_size=cfg.AUDIO_DATA.HOP_LENGTH
+                                    )
+
+        num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
+        spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
+        spectrogram = torch.tensor(spectrogram)
     else:
         samples = samples[start_idx:end_idx]
         if has_torch:
-            spectrogram = _log_specgram_torch(cfg, samples,
-                                        window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
-                                        step_size=cfg.AUDIO_DATA.HOP_LENGTH
-                                        )
+            spectrogram = _log_specgram_torch(cfg, samples)
+            spectrogram = spectrogram.cpu().detach().numpy()
+            num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
+            spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
+            spectrogram = torch.tensor(spectrogram)
 
-
+            # print("TORCH")
 
         else:
             spectrogram = _log_specgram(cfg, samples,
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                            )
-            spectrogram = torch.tensor(spectrogram)
 
-        return spectrogram.unsqueeze(0)
+            spectrogram = torch.tensor(spectrogram)
+    #print(torch.count_nonzero(spectrogram))
+
+    return spectrogram.unsqueeze(0)
 
 # def _extract_sound_feature(cfg, samples, start_idx, end_idx):
 #     if samples.shape[0] < int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)):

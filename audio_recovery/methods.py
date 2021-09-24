@@ -172,14 +172,12 @@ def trsfn(audio):
 
 
 # def iteratively_recover_audio(cfg, file_name, temporal_sample_index):
-def iteratively_recover_audio(mag, waveform):
+def iteratively_recover_audio(mag, waveform, global_idx):
     r"""
-
-
         Args:
             mag (Tensor): the input spectrogram. Must be of the shape of a single type of spectrogram?
-
-
+            waveform:
+            global_idx:
         Returns:
             A 1d tensor converted from the given presentation
         """
@@ -189,6 +187,9 @@ def iteratively_recover_audio(mag, waveform):
     waveform_tensor = torch.from_numpy(waveform)
     # #y = torch.from_numpy(waveform_tensor)
     # mag = trsfn(waveform_tensor)
+
+    # Because full batches are entered
+    mag = mag[global_idx]
 
     yhat = L_BFGS(mag, trsfn, len(waveform_tensor))
     yhat_cpu = yhat.cpu()

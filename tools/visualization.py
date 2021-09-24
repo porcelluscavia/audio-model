@@ -114,20 +114,22 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                 inputs, meta["boxes"]
             )
         else:
+
             activations, preds = model_vis.get_activations(inputs)
 
 
+
         if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
-            #CHANGE BACK FORREAL GRADCAM
+            #CHANGE BACK FOR REAL GRADCAM
             if cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.USE_TRUE_LABEL:
-                inputs, preds = gradcam.get_heatmapped_specgm(old_inputs, binary_mask=True)
-                #inputs, preds = gradcam(inputs, labels=labels, binary_mask = True)
+                #inputs, preds = gradcam.get_heatmapped_specgm(old_inputs, binary_mask=True)
+                inputs, preds = gradcam(inputs, labels=labels, binary_mask = False, )
             else:
                 #inputs/outputs here are by batch?
                 old_inputs = inputs
 
-                inputs, preds = gradcam.get_heatmapped_specgm(old_inputs, binary_mask=True)
-                #inputs, preds = gradcam(old_inputs, binary_mask = True)
+                #inputs, preds = gradcam.get_heatmapped_specgm(old_inputs, binary_mask=True)
+                inputs, preds = gradcam(old_inputs, binary_mask = False)
 
                 # import pdb
                 # pdb.set_trace()
@@ -179,30 +181,25 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             else:
                                 video = input_pathway[cur_batch_idx]
 
-                            #~Audio Recovery~
-                            #get the original audio file name
-                            #feed that through to here
-                            # y = y.cuda()
-                            #mag = trsfn(y)
+                            if cfg.VGGSOUND.PLAY_ORIGINAL_AUDIO:
+                                # Even indices begin the audio file.
+                                which_half = global_idx % 2
+                                # At the current audio settings, each audio file is split into two.
+                                audio_file_nr = math.floor(global_idx / 2)
+                                orig_audio = recovery.load_audio(cfg, audio_file_nr, which_half)
 
-                            #yhat = L_BFGS(mag, trsfn, len(y))
+                                writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
 
-                            #even indices begin the audio file
-                            which_half = global_idx % 2
-                            #at the current audio settings, each audio file is split into two
-                            audio_file_nr = math.floor(global_idx/2)
-                            # if idx_mod_two == 0:
-
-                            orig_audio = recovery.load_audio(cfg, audio_file_nr, which_half)
-
-                            # orig_audio = audio_vgg.recover_audio(cfg, video)
-                            writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
+                            if cfg.VGGSOUND.RECOVER_AUDIO:
+                                if cfg.VGGSOUND.TORCH_STFT_INPUTS:
+                                    recovered_audio = recovery.iteratively_recover_audio(video, orig_audio)
+                                else:
+                                    recovered_audio = audio_vgg.recover_audio(cfg, video)
+                                writer.add_audio(recovered_audio, tag="Original Input {}".format(global_idx))
 
 
                             if not cfg.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE:
                                 # Permute to (T, H, W, C) from (C, T, H, W).
-
-
                                 video = video.permute(1, 2, 3, 0)
                                 video = data_utils.revert_tensor_normalize(
                                     video, cfg.DATA.MEAN, cfg.DATA.STD
@@ -216,10 +213,10 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             )
                             cur_prediction = (
                                 cur_preds
-                                if cfg.DETECTION.ENABLE
-                                else cur_preds[cur_batch_idx]
-
+                                # if cfg.DETECTION.ENABLE
+                                # else cur_preds[cur_batch_idx]
                             )
+
                             video = video_vis.draw_clip(
                                 video, cur_prediction
                                 , bboxes=bboxes
@@ -227,20 +224,28 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             torch.save(video, '/home/stureski/output_tensor_{}'.format(global_idx))
                             video = (
                                 torch.from_numpy(np.array(video))
-                                .permute(0, 3, 1, 2)
-                                .unsqueeze(0)
-                                #adds extra dimension in the beginning
-                            )
+                                .permute(0, 3, 1, 2).unsqueeze(0)
+                                    #adds extra dimension in the beginning
+                                )
 
-                            # import pdb
-                            # pdb.set_trace()
-                            recovered_audio = recovery.iteratively_recover_audio(video, orig_audio)
-                            # "video" should be a log-mel spectrogram with a GradCAM binary mask applied - resulting in only salient audio
-                            #recovered_audio = audio_vgg.recover_audio(cfg, video)
-                            # video_tensors.append(video)
-                            # audio_tensors.append(recovered_audio)
+                            if cfg.VGGSOUND.PLAY_ORIGINAL_AUDIO:
+                                # Even indices begin the audio file.
+                                which_half = global_idx % 2
+                                # At the current audio settings, each audio file is split into two.
+                                audio_file_nr = math.floor(global_idx / 2)
+                                orig_audio = recovery.load_audio(cfg, audio_file_nr, which_half)
 
-                            writer.add_audio(recovered_audio, tag="Input {}/Pathway{}".format(global_idx, path_idx + 1))
+                                writer.add_audio(orig_audio, tag="Original Input {}".format(global_idx))
+
+                            if cfg.VGGSOUND.RECOVER_AUDIO:
+                                if cfg.VGGSOUND.TORCH_STFT_INPUTS:
+                                    # The point of having torch spectrogram input is to recover audio using the L-BFGS method.
+                                    recovered_audio = recovery.iteratively_recover_audio(video, orig_audio)
+                                else:
+                                    recovered_audio = audio_vgg.recover_audio(cfg, video)
+                                    writer.add_audio(recovered_audio,
+                                                     tag="Input {}/Pathway{}".format(global_idx, path_idx + 1))
+
                             if cfg.TENSORBOARD.MODEL_VIS.WAVEPLOT.ENABLE:
                                 writer.add_waveplot(recovered_audio, tag="Input {}".format(global_idx))
 
@@ -256,7 +261,6 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 writer.add_waveplot(recovered_audio, tag="Input {}".format(global_idx))
 
 
-
                     if cfg.TENSORBOARD.MODEL_VIS.ACTIVATIONS:
 
                         writer.plot_weights_and_activations(
@@ -264,11 +268,8 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                             tag="Input {}/Activations: ".format(global_idx),
                             batch_idx=cur_batch_idx,
                             indexing_dict=indexing_dict,
-
-
                         )
-            # import pdb
-            # pdb.set_trace()
+
 
 
 def perform_wrong_prediction_vis(vis_loader, model, cfg):
@@ -389,24 +390,24 @@ def visualize(cfg):
                 cfg.DATA.ENSEMBLE_METHOD,
             )
         else:
-            # test_meter = TestMeter(
-            #     len(vis_loader.dataset)
-            #     // cfg.TEST.NUM_ENSEMBLE_VIEWS,
-            #     cfg.TEST.NUM_ENSEMBLE_VIEWS,
-            #     cfg.MODEL.NUM_CLASSES[0],
-            #     len(vis_loader),
-            #     cfg.DATA.MULTI_LABEL,
-            #     cfg.DATA.ENSEMBLE_METHOD,
-
             test_meter = TestMeter(
                 len(vis_loader.dataset)
                 // cfg.TEST.NUM_ENSEMBLE_VIEWS,
                 cfg.TEST.NUM_ENSEMBLE_VIEWS,
-                cfg.MODEL.NUM_CLASSES,
+                cfg.MODEL.NUM_CLASSES[0],
                 len(vis_loader),
                 cfg.DATA.MULTI_LABEL,
-                cfg.DATA.ENSEMBLE_METHOD,
-            )
+                cfg.DATA.ENSEMBLE_METHOD,)
+
+            # test_meter = TestMeter(
+            #     len(vis_loader.dataset)
+            #     // cfg.TEST.NUM_ENSEMBLE_VIEWS,
+            #     cfg.TEST.NUM_ENSEMBLE_VIEWS,
+            #     cfg.MODEL.NUM_CLASSES,
+            #     len(vis_loader),
+            #     cfg.DATA.MULTI_LABEL,
+            #     cfg.DATA.ENSEMBLE_METHOD,
+            # )
 
         # Set up writer for logging to Tensorboard format.
         if du.is_master_proc(cfg.NUM_GPUS * cfg.NUM_SHARDS):
