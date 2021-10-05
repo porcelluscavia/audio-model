@@ -107,6 +107,9 @@ def train_epoch(
             if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
                 emb_loss_fun = losses.get_loss_func(cfg.MODEL.EMB_LOSS_FUNC)(reduction="mean")
 
+                import pdb
+                pdb.set_trace()
+
                 # Get array of (pretrained, from file) embeddings for all the labels in the batch.
                 embeddings_for_batch = embeddings(labels)
 
@@ -329,7 +332,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, embeddings=None, wr
     for cur_iter, (inputs, labels, _, meta) in enumerate(val_loader):
         if cfg.NUM_GPUS:
             if embeddings:
-            embeddings = embeddings.to('cuda', non_blocking=True)
+                embeddings = embeddings.to('cuda', non_blocking=True)
             # Transfer the data to the current GPU device.
             if isinstance(inputs, (list,)):
                 for i in range(len(inputs)):
@@ -462,6 +465,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, embeddings=None, wr
 
             if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
                 emb_loss_fun = losses.get_loss_func(cfg.MODEL.EMB_LOSS_FUNC)(reduction="mean")
+
 
                 # Get array of (pretrained, from file) embeddings for all the labels in the batch.
                 embeddings_for_batch = embeddings(labels)

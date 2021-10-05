@@ -394,7 +394,7 @@ def visualize(cfg):
                 len(vis_loader.dataset)
                 // cfg.TEST.NUM_ENSEMBLE_VIEWS,
                 cfg.TEST.NUM_ENSEMBLE_VIEWS,
-                cfg.MODEL.NUM_CLASSES[0],
+                cfg.MODEL.NUM_CLASSES,
                 len(vis_loader),
                 cfg.DATA.MULTI_LABEL,
                 cfg.DATA.ENSEMBLE_METHOD,)

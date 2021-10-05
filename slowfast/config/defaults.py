@@ -609,7 +609,7 @@ _C.MODEL.ARCH = "slowfast"
 _C.MODEL.MODEL_NAME = "SlowFast"
 
 # The number of classes to predict for the model.
-_C.MODEL.NUM_CLASSES = [309, ]
+_C.MODEL.NUM_CLASSES = 309
 
 # Loss function.
 _C.MODEL.LOSS_FUNC = "cross_entropy"
@@ -955,7 +955,7 @@ _C.VGGSOUND.RECOVER_AUDIO = False
 
 _C.VGGSOUND.PLAY_ORIGINAL_AUDIO = False
 
-# Whether or not the model contains a final linear layer to approximate embeddings.
+# Whether or not the model contains final linear layer(s) to approximate embeddings.
 _C.VGGSOUND.EMBEDDINGS_ENABLE = True
 
 # Proportion of the embedding weight to use.

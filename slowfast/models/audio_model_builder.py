@@ -320,7 +320,7 @@ class SlowFast(nn.Module):
 
     def forward(self, x, bboxes=None):
 
-        if self.cfg.EMBEDDINGS_ENABLE:
+        if self.cfg.VGGSOUND.EMBEDDINGS_ENABLE:
             # print(type(x)) #list
             # print(x[1])
             # print(np.shape(x[0])) #torch.Size([1, 1, 128, 128]) #slow

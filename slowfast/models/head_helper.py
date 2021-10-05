@@ -59,6 +59,8 @@ class ResNetBasicHead(nn.Module):
             avg_pool = nn.AvgPool2d(pool_size[pathway], stride=1)
             self.add_module("pathway{}_avgpool".format(pathway), avg_pool)
 
+        self.cfg = cfg
+
         if dropout_rate > 0.0:
             self.dropout = nn.Dropout(dropout_rate)
         # Perform FC in a fully convolutional manner. The FC layer will be
@@ -123,7 +125,7 @@ class ResNetBasicHead(nn.Module):
 
             x = x.view(x.shape[0], -1)
 
-            if self.cfg.EMBEDDINGS_ENABLE:
+            if self.cfg.VGGSOUND.EMBEDDINGS_ENABLE:
                 return x, linear_output
 
             return x

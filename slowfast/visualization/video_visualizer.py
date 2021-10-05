@@ -402,7 +402,7 @@ class VideoVisualizer:
         # import pdb
         # pdb.set_trace()
         #return self.color_map(class_id / self.num_classes)[:3]
-        return self.color_map(class_id / self.num_classes[0])[:3]
+        return self.color_map(class_id / self.num_classes)[:3]
 
     def draw_one_frame(
         self,
