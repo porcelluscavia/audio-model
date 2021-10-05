@@ -2,6 +2,12 @@ import random
 import numpy as np
 import torch
 import os
+from sklearn.preprocessing import MinMaxScaler
+from pathlib import Path
+import numpy as np
+import os
+
+
 # import tensorflow as tf
 # tf.compat.v1.enable_eager_execution()
 
@@ -148,7 +154,7 @@ def pack_audio(cfg, audio_record, temporal_sample_index):
     )
     spectrogram = _extract_sound_feature(cfg, samples, int(start_idx), int(end_idx), has_torch=cfg.VGGSOUND.TORCH_STFT_INPUTS)
     # print(spectrogram)
-    torch.save(spectrogram, '/home/stureski/inspect_tensors/librosa_spec.pt')
+
     return spectrogram
 
 
@@ -213,6 +219,7 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx, has_torch=False):
 
     if samples.shape[0] < int(round(cfg.AUDIO_DATA.SAMPLING_RATE * cfg.AUDIO_DATA.CLIP_SECS)):
         if has_torch:
+            # This branch never seems to be implemented... *no error is thrown when there should be.)
             spectrogram = _log_specgram_torch(cfg, samples)
         else:
             spectrogram = _log_specgram(cfg, samples,
@@ -228,19 +235,27 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx, has_torch=False):
         if has_torch:
             spectrogram = _log_specgram_torch(cfg, samples)
             spectrogram = spectrogram.cpu().detach().numpy()
-            num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
-            spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
-            spectrogram = torch.tensor(spectrogram)
 
-            # print("TORCH")
+            # Currently: spectrogram.shape[0] is 160, num_timesteps_to_pad is 352
+            num_timesteps_to_pad = cfg.AUDIO_DATA.NUM_FRAMES - spectrogram.shape[0]
+            #print(spectrogram.shape)
+            # Concatenate num_timesteps_to_pad rows of the final row to our spectrogram- essentially stretch out the last bit
+            spectrogram = np.pad(spectrogram, ((0, num_timesteps_to_pad), (0, 0)), 'edge')
+            # Normalize values.
+            scaler = MinMaxScaler(feature_range=(-10, 10))
+            spectrogram = scaler.fit_transform(spectrogram)
+
 
         else:
             spectrogram = _log_specgram(cfg, samples,
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                            )
-
-            spectrogram = torch.tensor(spectrogram)
+        spec_file = os.path.join(cfg.VGGSOUND.FILE_DIR, 'saved_specs.npy')
+        p = Path(spec_file)
+        with p.open('ab') as f:
+            np.save(f, spectrogram)
+        spectrogram = torch.tensor(spectrogram)
     #print(torch.count_nonzero(spectrogram))
 
     return spectrogram.unsqueeze(0)

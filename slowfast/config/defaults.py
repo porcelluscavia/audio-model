@@ -902,6 +902,9 @@ _C.DATA_LOADER = CfgNode()
 # Number of data loader workers per training process.
 _C.DATA_LOADER.NUM_WORKERS = 8
 
+# Load pre_made spectrograms from file.
+_C.DATA_LOADER.LOAD_FROM_FILE = False
+
 # Load data to pinned host memory.
 _C.DATA_LOADER.PIN_MEMORY = True
 
@@ -940,6 +943,8 @@ _C.VGGSOUND.AUDIO_DATA_DIR = "/home/askoepke97/shared-datasets/VGGSound/audio"
 
 _C.VGGSOUND.ANNOTATIONS_DIR = "/home/stureski/annotations"
 
+_C.VGGSOUND.FILE_DIR = "/home/stureski"
+
 _C.VGGSOUND.EMBEDDINGS_FILE_TRAIN = ""
 
 _C.VGGSOUND.EMBEDDINGS_SIZE = 0
@@ -950,8 +955,10 @@ _C.VGGSOUND.RECOVER_AUDIO = False
 
 _C.VGGSOUND.PLAY_ORIGINAL_AUDIO = False
 
+# Whether or not the model contains a final linear layer to approximate embeddings.
+_C.VGGSOUND.EMBEDDINGS_ENABLE = True
 
-# Proportion of the embedding weight to use,
+# Proportion of the embedding weight to use.
 _C.VGGSOUND.LAMBDA = 0.0
 
 _C.VGGSOUND.EMBEDDINGS_FILE_TEST = ""

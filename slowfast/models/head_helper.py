@@ -31,6 +31,7 @@ class ResNetBasicHead(nn.Module):
         pool_size,
         dropout_rate=0.0,
         act_func="softmax",
+        cfg=None,
     ):
         """
         The `__init__` method of any subclass should also contain these
@@ -113,6 +114,7 @@ class ResNetBasicHead(nn.Module):
             return (x_v, x_n)
         else:
             x = self.projection(x)
+            linear_output = x
 
             # Performs fully convlutional inference.
             if not self.training:
@@ -120,6 +122,10 @@ class ResNetBasicHead(nn.Module):
                 x = x.mean([1, 2])
 
             x = x.view(x.shape[0], -1)
+
+            if self.cfg.EMBEDDINGS_ENABLE:
+                return x, linear_output
+
             return x
 
 # class ResNetBasicHead(nn.Module):

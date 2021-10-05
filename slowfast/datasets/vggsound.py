@@ -68,12 +68,15 @@ class Vggsound(torch.utils.data.Dataset):
             )
         )
 
-    def __getitem__(self, index):
+
+
+    def __getitem__(self, index, premade_spectrograms = True):
         """
         Given the audio index, return the spectrogram, label, and audio
         index.
         Args:
             index (int): the audio index provided by the pytorch sampler.
+            premade_spectrograms (bool): whether the spectrograms should be loaded from a file.
         Returns:
             spectrogram (tensor): the spectrogram sampled from the audio. The dimension
                 is `channel` x `num frames` x `num frequencies`.
@@ -92,6 +95,8 @@ class Vggsound(torch.utils.data.Dataset):
             )
 
         spectrogram = pack_audio(self.cfg, self._audio_records[index], temporal_sample_index)
+
+        torch.save(spectrogram, '/home/stureski/inspect_tensors/librosa_spec.pt')
         # Normalization.
         spectrogram = spectrogram.float()
         if self.mode in ["train"]:
@@ -103,7 +108,9 @@ class Vggsound(torch.utils.data.Dataset):
             # C F T -> C T F
             spectrogram = spectrogram.permute(0, 2, 1)
         label = self._audio_records[index]['class_id']
+
         spectrogram = utils.pack_pathway_output(self.cfg, spectrogram)
+
         return spectrogram, label, index, {}
 
     def __len__(self):
