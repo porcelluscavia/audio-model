@@ -64,6 +64,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
             audio_idx = audio_idx.cuda()
         test_meter.data_toc()
 
+
         # Perform the forward pass.
         #Inputs has size 1 x 32 x [64, 32, 32]
         preds = model(inputs)
@@ -212,7 +213,7 @@ def test(cfg):
             len(test_loader.dataset)
             // cfg.TEST.NUM_ENSEMBLE_VIEWS,
             cfg.TEST.NUM_ENSEMBLE_VIEWS,
-            cfg.MODEL.NUM_CLASSES[0],
+            cfg.MODEL.NUM_CLASSES,
             len(test_loader),
             cfg.DATA.MULTI_LABEL,
             cfg.DATA.ENSEMBLE_METHOD,
@@ -225,6 +226,7 @@ def test(cfg):
         writer = tb.TensorboardWriter(cfg)
     else:
         writer = None
+
 
     # # Perform multi-view test on the entire dataset.
     test_meter, preds, preds_clips, labels, metadata = perform_test(test_loader, model, test_meter, cfg, writer)

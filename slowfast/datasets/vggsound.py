@@ -96,7 +96,7 @@ class Vggsound(torch.utils.data.Dataset):
 
         spectrogram = pack_audio(self.cfg, self._audio_records[index], temporal_sample_index)
 
-        torch.save(spectrogram, '/home/stureski/inspect_tensors/librosa_spec.pt')
+        #torch.save(spectrogram, '/home/stureski/inspect_tensors/librosa_spec.pt')
         # Normalization.
         spectrogram = spectrogram.float()
         if self.mode in ["train"]:

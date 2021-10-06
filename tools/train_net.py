@@ -107,9 +107,6 @@ def train_epoch(
             if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
                 emb_loss_fun = losses.get_loss_func(cfg.MODEL.EMB_LOSS_FUNC)(reduction="mean")
 
-                import pdb
-                pdb.set_trace()
-
                 # Get array of (pretrained, from file) embeddings for all the labels in the batch.
                 embeddings_for_batch = embeddings(labels)
 
@@ -118,7 +115,7 @@ def train_epoch(
 
                 # Compute the loss on the labels (label represented as single number).
                 # print("labels: ", labels) #batch size is 32. there are 32 labels.
-
+                loss = loss_fun(preds, labels)
 
                 # print("embeddings_for_batch: ", embeddings_for_batch)
                 new_shape = embeddings_for_batch.shape
@@ -129,6 +126,9 @@ def train_epoch(
 
                 # Add the losses, so as to fine tune using the embeddings.
                 loss = ((1 - cfg.VGGSOUND.LAMBDA) * loss) + (cfg.VGGSOUND.LAMBDA * emb_loss)
+
+                # check Nan Loss.
+                misc.check_nan_losses(loss)
 
             else:
                 loss = loss_fun(preds, labels)
@@ -667,10 +667,13 @@ def train(cfg):
         train_loader = loader.construct_loader(cfg, "train")
         val_loader = loader.construct_loader(cfg, "val")
         #since both train and val are derived from the inputted "train" file, the following embeddings contain the info for both
+        # And epoch is less than
         if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
             train_embedding_weights = loader.load_embeddings(cfg, train=True)
             train_embedding_weights = torch.from_numpy(train_embedding_weights)
             train_embeddings = nn.Embedding.from_pretrained(train_embedding_weights)
+
+        # And epoch is greater than
         precise_bn_loader = (
             loader.construct_loader(cfg, "train")
             if cfg.BN.USE_PRECISE_STATS
@@ -722,6 +725,10 @@ def train(cfg):
 
         # Shuffle the dataset.
         loader.shuffle_dataset(train_loader, cur_epoch)
+
+        # Set up the embeddings for the final linear layer.
+        if cfg.VGGSOUND.EMBEDDINGS_ENABLE and not cur_epoch in range (start_epoch, start_epoch + cfg.SOLVER.EMBEDDINGS_FROZEN_EPOCHS):
+            train_embeddings.weight.requires_grad = True
 
         # Train for one epoch.
         if cfg.VGGSOUND.EMBEDDINGS_ENABLE:

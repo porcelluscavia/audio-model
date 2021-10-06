@@ -4,6 +4,7 @@
 """Data loader."""
 
 import itertools
+import os
 import numpy as np
 import torch
 from torch.utils.data._utils.collate import default_collate
@@ -85,7 +86,8 @@ def load_embeddings(cfg, train=True):
         train (bool): whether we're using the train or the test set.
     """
     if train:
-        with open(cfg.VGGSOUND.EMBEDDINGS_FILE_TRAIN, 'rb') as f:
+        embeddings_file = os.path.join(cfg.VGGSOUND.EMBEDDINGS_DIR, cfg.VGGSOUND.EMBEDDINGS_FILE_TRAIN)
+        with open(embeddings_file , 'rb') as f:
             embedding = np.load(f)
 
     else:

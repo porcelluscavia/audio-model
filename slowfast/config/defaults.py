@@ -864,6 +864,9 @@ _C.SOLVER.OPTIMIZING_METHOD = "sgd"
 # Base learning rate is linearly scaled with NUM_SHARDS.
 _C.SOLVER.BASE_LR_SCALE_NUM_SHARDS = False
 
+# How many epochs will the embeddings remain untrainable?
+_C.SOLVER.EMBEDDINGS_FROZEN_EPOCHS = 3
+
 # ---------------------------------------------------------------------------- #
 # Misc options
 # ---------------------------------------------------------------------------- #
@@ -945,9 +948,14 @@ _C.VGGSOUND.ANNOTATIONS_DIR = "/home/stureski/annotations"
 
 _C.VGGSOUND.FILE_DIR = "/home/stureski"
 
+_C.VGGSOUND.EMBEDDINGS_DIR = "/home/stureski/embeddings_data"
+
 _C.VGGSOUND.EMBEDDINGS_FILE_TRAIN = ""
 
+# The size of the embeddings: (NUM_CLASSES, EMBEDDINGS_SIZE). Glove, fasttext, conceptnet are size 300, BERT 768.
 _C.VGGSOUND.EMBEDDINGS_SIZE = 0
+
+_C.VGGSOUND.EMBEDDINGS_FROZEN_EPOCHS = 3
 
 _C.VGGSOUND.TORCH_STFT_INPUTS = False
 
