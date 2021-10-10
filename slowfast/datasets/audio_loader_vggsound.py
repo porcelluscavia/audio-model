@@ -251,10 +251,10 @@ def _extract_sound_feature(cfg, samples, start_idx, end_idx, has_torch=False):
                                     window_size=cfg.AUDIO_DATA.WINDOW_LENGTH,
                                     step_size=cfg.AUDIO_DATA.HOP_LENGTH
                            )
-        spec_file = os.path.join(cfg.VGGSOUND.FILE_DIR, 'saved_specs.npy')
-        p = Path(spec_file)
-        with p.open('ab') as f:
-            np.save(f, spectrogram)
+        # spec_file = os.path.join(cfg.VGGSOUND.FILE_DIR, 'saved_specs.npy')
+        # p = Path(spec_file)
+        # with p.open('ab') as f:
+        #     np.save(f, spectrogram)
         spectrogram = torch.tensor(spectrogram)
     #print(torch.count_nonzero(spectrogram))
 

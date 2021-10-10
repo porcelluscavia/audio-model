@@ -221,7 +221,7 @@ def run_visualization(vis_loader, model, cfg, writer=None):
                                 video, cur_prediction
                                 , bboxes=bboxes
                             )
-                            torch.save(video, '/home/stureski/output_tensor_{}'.format(global_idx))
+                            #torch.save(video, '/home/stureski/output_tensor_{}'.format(global_idx))
                             video = (
                                 torch.from_numpy(np.array(video))
                                 .permute(0, 3, 1, 2).unsqueeze(0)

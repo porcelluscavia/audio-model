@@ -203,6 +203,7 @@ def load_checkpoint(
     # Load pre-trained weights.
     ms.load_state_dict(pre_train_dict_match, strict=False)
 
+
     # Load the optimizer state (commonly not done when fine-tuning)
     if "epoch" in checkpoint.keys() and not epoch_reset:
         epoch = checkpoint["epoch"]

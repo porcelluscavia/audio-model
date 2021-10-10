@@ -290,7 +290,11 @@ class SlowFast(nn.Module):
             norm_module=self.norm_module,
         )
 
-        self.linear = torch.nn.Linear(309, cfg.VGGSOUND.EMBEDDINGS_SIZE)
+        self.linear1 = torch.nn.Linear(309, cfg.VGGSOUND.EMBEDDINGS_SIZE)
+
+        self.linear2 = torch.nn.Linear(cfg.VGGSOUND.EMBEDDINGS_SIZE, 100)
+
+        self.bn1 = nn.BatchNorm1d(num_features=cfg.VGGSOUND.EMBEDDINGS_SIZE)
 
         self.softmax = nn.Softmax(dim=1)
 
@@ -356,8 +360,29 @@ class SlowFast(nn.Module):
             # import pdb
             # pdb.set_trace()
             x, linear_output = self.head(x)
-            ll_output = self.linear(linear_output)
+            ll_output = self.linear1(linear_output)
             return x, ll_output
+
+        elif self.cfg.VGGSOUND.EMBEDDINGS_ENABLE and self.cfg.VGGSOUND.TWO_LIN_LAYERS:
+
+            x = self.s1(x)
+            x = self.s1_fuse(x)
+            x = self.s2(x)
+            x = self.s2_fuse(x)
+            for pathway in range(self.num_pathways):
+                pool = getattr(self, "pathway{}_pool".format(pathway))
+                x[pathway] = pool(x[pathway])
+            x = self.s3(x)
+            x = self.s3_fuse(x)
+            x = self.s4(x)
+            x = self.s4_fuse(x)
+            x = self.s5(x)
+            x, linear_output = self.head(x)
+            y = nn.relu(self.bn1(self.linear1(linear_output)))
+            ll_output = self.linear2(y)
+            #ll_output = nn.softmax(self.linear2(y), dim=1)
+            return x, ll_output
+
         else:
 
             x = self.s1(x)
