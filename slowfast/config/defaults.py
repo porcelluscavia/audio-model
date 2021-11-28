@@ -1007,7 +1007,8 @@ _C.TENSORBOARD.CATEGORIES_PATH = ""
 # Config for making reconstructed audio clip.
 _C.TENSORBOARD.AUDIO_RECONSTRUCTIONS = CfgNode()
 # Add reconstructed audio clip. to Tensorboard.
-_C.TENSORBOARD.AUDIO_RECONSTRUCTIONS.ENABLE = True
+_C.TENSORBOARD.AUDIO_RECONSTRUCTIONS.ENABLE = False
+
 
 
 # Config for confusion matrices visualization.
@@ -1038,16 +1039,16 @@ _C.TENSORBOARD.HISTOGRAM.FIGSIZE = [8, 8]
 _C.TENSORBOARD.MODEL_VIS = CfgNode()
 
 # If False, skip model visualization.
-_C.TENSORBOARD.MODEL_VIS.ENABLE = True
+_C.TENSORBOARD.MODEL_VIS.ENABLE = False
 
 # If False, skip visualizing model weights.
-_C.TENSORBOARD.MODEL_VIS.MODEL_WEIGHTS = True
+_C.TENSORBOARD.MODEL_VIS.MODEL_WEIGHTS = False
 
 # If False, skip visualizing model activations.
-_C.TENSORBOARD.MODEL_VIS.ACTIVATIONS = True
+_C.TENSORBOARD.MODEL_VIS.ACTIVATIONS = False
 
 # If False, skip visualizing input videos.
-_C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = True
+_C.TENSORBOARD.MODEL_VIS.INPUT_VIDEO = False
 
 
 # List of strings containing data about layer names and their indexing to
@@ -1069,7 +1070,7 @@ _C.TENSORBOARD.MODEL_VIS.COLORMAP = "spring"
 # _C.TENSORBOARD.ENABLE must be True.
 _C.TENSORBOARD.MODEL_VIS.GRAD_CAM = CfgNode()
 # Whether to run visualization using Grad-CAM technique.
-_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE = True
+_C.TENSORBOARD.MODEL_VIS.GRAD_CAM.ENABLE = False
 # CNN layers to use for Grad-CAM. The number of layers must be equal to
 # number of pathway(s).
 # _C.TENSORBOARD.MODEL_VIS.GRAD_CAM.LAYER_LIST = ['head/pathway0_avgpool', 'head/pathway1_avgpool']

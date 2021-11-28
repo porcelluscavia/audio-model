@@ -28,8 +28,7 @@ logger = logging.get_logger(__name__)
 
 
 def train_epoch(
-    train_loader, model, optimizer, train_meter, cur_epoch, cfg, embeddings=None, writer=None, wandb_log=False
-):
+    train_loader, model, optimizer, train_meter, cur_epoch, cfg, writer=None, wandb_log=False, embeddings=None):
     """
     Perform the audio training for one epoch.
     Args:
@@ -115,7 +114,7 @@ def train_epoch(
 
                 # Compute the loss on the labels (label represented as single number).
                 # print("labels: ", labels) #batch size is 32. there are 32 labels.
-                loss = loss_fun(preds, labels)
+                slowfast_loss = loss_fun(preds, labels)
 
                 # print("embeddings_for_batch: ", embeddings_for_batch)
                 new_shape = embeddings_for_batch.shape
@@ -125,7 +124,7 @@ def train_epoch(
 
 
                 # Add the losses, so as to fine tune using the embeddings.
-                loss = ((1 - cfg.VGGSOUND.LAMBDA) * loss) + (cfg.VGGSOUND.LAMBDA * emb_loss)
+                loss = ((1 - cfg.VGGSOUND.LAMBDA) * slowfast_loss) + (cfg.VGGSOUND.LAMBDA * emb_loss)
 
                 # check Nan Loss.
                 misc.check_nan_losses(loss)
@@ -267,29 +266,63 @@ def train_epoch(
                     top5_err.item(),
                 )
 
+                if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
+                    slowfast_loss, emb_loss = (
+                        slowfast_loss.item(),
+                        emb_loss.item()
+                    )
+
+
             # Update and log stats.
+            # if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
+            #     train_meter.update_stats(
+            #         top1_err,
+            #         top5_err,
+            #         loss,
+            #         slowfast_loss,
+            #         emb_loss,
+            #         lr,
+            #         inputs[0].size(0)
+            #         * max(
+            #             cfg.NUM_GPUS, 1
+            #         ),  # If running  on CPU (cfg.NUM_GPUS == 1), use 1 to represent 1 CPU.
+            #     )
+            #
+            # else:
             train_meter.update_stats(
-                top1_err,
-                top5_err,
-                loss,
-                lr,
-                inputs[0].size(0)
-                * max(
-                    cfg.NUM_GPUS, 1
-                ),  # If running  on CPU (cfg.NUM_GPUS == 1), use 1 to represent 1 CPU.
-            )
+                        top1_err,
+                        top5_err,
+                        loss,
+                        lr,
+                        inputs[0].size(0)
+                        * max(
+                            cfg.NUM_GPUS, 1
+                        ),  # If running  on CPU (cfg.NUM_GPUS == 1), use 1 to represent 1 CPU.
+                    )
             # write to tensorboard format if available.
             if writer is not None and not wandb_log:
-                writer.add_scalars(
-                    {
+                if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
+                    writer.add_scalars(
+                        {
+                            "Train/loss": loss,
+                            "Train/slowfast_loss": slowfast_loss,
+                            "Train/emb_loss": emb_loss,
+                            "Train/lr": lr,
+                            "Train/Top1_err": top1_err,
+                            "Train/Top5_err": top5_err,
+                        },
+                        global_step=data_size * cur_epoch + cur_iter,
+                    )
+                else:
+                    writer.add_scalars(
+                        {
                         "Train/loss": loss,
-                        "Train/lr": lr,
-                        "Train/Top1_err": top1_err,
-                        "Train/Top5_err": top5_err,
+                    "Train/lr": lr,
+                    "Train/Top1_err": top1_err,
+                    "Train/Top5_err": top5_err,
                     },
-                    global_step=data_size * cur_epoch + cur_iter,
-                )
-
+                    global_step = data_size * cur_epoch + cur_iter,
+                    )
             if wandb_log:
                 wandb.log(
                     {
@@ -311,7 +344,7 @@ def train_epoch(
 
 
 @torch.no_grad()
-def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, embeddings=None, writer=None, wandb_log=False):
+def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None, wandb_log=False, embeddings=None,):
     """
     Evaluate the model on the val set.
     Args:
@@ -733,7 +766,7 @@ def train(cfg):
         # Train for one epoch.
         if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
             train_epoch(
-                train_loader, model, optimizer, train_meter, cur_epoch, cfg, train_embeddings, writer, wandb_log
+                train_loader, model, optimizer, train_meter, cur_epoch, cfg, writer, wandb_log, train_embeddings,
             )
         else:
             train_epoch(
@@ -768,7 +801,7 @@ def train(cfg):
         # Evaluate the model on validation set.
         if is_eval_epoch:
             if cfg.VGGSOUND.EMBEDDINGS_ENABLE:
-                is_best_epoch, _ = eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, train_embeddings, writer, wandb_log)
+                is_best_epoch, _ = eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer, wandb_log, train_embeddings)
             else:
                 is_best_epoch, _ = eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer, wandb_log)
 

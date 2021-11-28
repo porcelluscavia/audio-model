@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from pathlib import Path
 import numpy as np
 import os
+from librosa.filters import mel
 
 
 # import tensorflow as tf
@@ -186,7 +187,7 @@ def _log_specgram(cfg, audio, window_size=10,
     # print(log_mel_spec.T.shape)
     return log_mel_spec.T
 
-def _log_specgram_torch(cfg, waveform):
+def _log_specgram_torch_1(cfg, waveform):
     audio = torch.from_numpy(waveform)
     #audio = audio.cuda()
     windowsize = 2048
@@ -212,6 +213,18 @@ def _log_specgram_torch(cfg, waveform):
     log_mel_S = torch.log1p(mel_S)
     log_mel_S_T = torch.transpose(log_mel_S, 0, 1)
     # print(log_mel_S_T.shape)
+    log_mel_S_T = log_mel_S_T.cpu()
+    return log_mel_S_T
+
+def _log_specgram_torch(cfg, waveform):
+    audio = torch.from_numpy(waveform)
+    windowsize = 2048
+    window = torch.hann_window(windowsize)
+    filter_banks = torch.from_numpy(mel(cfg.AUDIO_DATA.SAMPLING_RATE, windowsize))
+    S = torch.stft(audio, windowsize, window=window).pow(2).sum(2).sqrt()
+    mel_S = filter_banks @ S
+    log_mel_S = torch.log1p(mel_S)
+    log_mel_S_T = torch.transpose(log_mel_S, 0, 1)
     log_mel_S_T = log_mel_S_T.cpu()
     return log_mel_S_T
 
